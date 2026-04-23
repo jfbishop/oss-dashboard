@@ -1,0 +1,22 @@
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Raw / sensitive source data — keep in your working directory, not the public repo
+data/raw/
+data/*.bak
+
+# Logs
+*.log

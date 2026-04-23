@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open Streets Schools · NYC Equity Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --case:   #5B4FCF;
+    --case-light: #EAE8FA;
+    --case-mid: #A89EE8;
+    --ctrl:   #1A8A6B;
+    --ctrl-light: #D8F0E9;
+    --ctrl-mid: #6BBFA4;
+    --excl:   #D4820A;
+    --excl-light: #FDF0D8;
+    --seg-all:  #E85C2B;
+    --seg-mid:  #5B8FD4;
+    --seg-drop: #2BAE8F;
+    --seg-pick: #D44F8F;
+    --pink:  #ED93B1;
+    --bg:    #F7F5F0;
+    --surface: #FFFFFF;
+    --border: rgba(0,0,0,0.09);
+    --border-med: rgba(0,0,0,0.15);
+    --text:  #1A1A18;
+    --text2: #5A5A54;
+    --text3: #8A8A84;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 4px 24px rgba(0,0,0,0.12);
+  }
+  html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+
+  /* ── Top Bar ── */
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1100;
+    height: 52px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 0;
+    padding: 0 16px;
+  }
+  #topbar-title {
+    font-family: 'Fraunces', serif;
+    font-size: 15px; font-weight: 400; font-style: italic;
+    color: var(--text); white-space: nowrap; margin-right: 20px;
+    letter-spacing: -0.01em;
+  }
+  #topbar-title strong { font-style: normal; font-weight: 600; }
+  #layer-pills {
+    display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto;
+    scrollbar-width: none; flex: 1;
+  }
+  #layer-pills::-webkit-scrollbar { display: none; }
+  .lpill {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    cursor: pointer; border: 1.5px solid transparent;
+    white-space: nowrap; transition: opacity 0.15s, transform 0.1s;
+    user-select: none;
+  }
+  .lpill:active { transform: scale(0.96); }
+  .lpill.off { opacity: 0.38; }
+  .lpill-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .lpill-line { width: 14px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+  .pill-case  { background: var(--case-light);  border-color: var(--case-mid);  color: #3B2E9E; }
+  .pill-ctrl  { background: var(--ctrl-light);  border-color: var(--ctrl-mid);  color: #0D5A44; }
+  .pill-excl  { background: var(--excl-light);  border-color: #F0A84A;          color: #8A4F00; }
+  .pill-segs  { background: linear-gradient(90deg,#FEF0EB 0%,#E3EDF8 33%,#E0F5EE 66%,#FBEAF0 100%); border-color: #ccc; color: #333; }
+  .pill-buf   { background: #E8F4E0; border-color: #90C860; color: #2A5A00; }
+
+  #topbar-right { display: flex; align-items: center; gap: 8px; margin-left: 12px; flex-shrink: 0; }
+  #clear-btn {
+    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    border: 1.5px solid var(--border-med); background: transparent;
+    color: var(--text2); cursor: pointer; font-family: inherit;
+    transition: background 0.15s;
+  }
+  #clear-btn:hover { background: var(--bg); }
+
+  /* ── Layout ── */
+  #app { position: fixed; top: 52px; left: 0; right: 0; bottom: 0; display: flex; }
+  #map { flex: 1; }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 310px; flex-shrink: 0;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.25s ease;
+  }
+  #sidebar.collapsed { transform: translateX(310px); }
+
+  #sb-empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px 24px; text-align: center;
+    color: var(--text3);
+  }
+  #sb-empty .hint-icon {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--bg); display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 12px; font-size: 22px;
+  }
+  #sb-empty p { font-size: 13px; line-height: 1.6; }
+
+  #sb-content { flex: 1; overflow-y: auto; display: none; }
+  #sb-content.show { display: flex; flex-direction: column; }
+
+  /* Sidebar header */
+  #sb-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
+  #sb-school-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.03em; text-transform: uppercase; margin-bottom: 6px;
+  }
+  #sb-school-name {
+    font-family: 'Fraunces', serif; font-size: 16px; font-weight: 400;
+    line-height: 1.3; margin-bottom: 3px; color: var(--text);
+  }
+  #sb-school-meta { font-size: 12px; color: var(--text2); line-height: 1.4; }
+  #sb-match-link {
+    margin-top: 8px; display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    padding: 4px 10px; border-radius: 8px;
+    border: 1.5px solid var(--border-med); color: var(--text2);
+    transition: background 0.15s;
+  }
+  #sb-match-link:hover { background: var(--bg); }
+
+  /* Tabs */
+  #sb-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .sb-tab {
+    flex: 1; padding: 9px 4px; text-align: center;
+    font-size: 12px; font-weight: 500; color: var(--text3);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .sb-tab.active { color: var(--text); border-bottom-color: var(--case); }
+
+  /* Tab panels */
+  .sb-panel { display: none; padding: 14px 16px; flex-direction: column; gap: 14px; }
+  .sb-panel.active { display: flex; }
+
+  .sb-section-title {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text3); margin-bottom: 8px;
+  }
+
+  /* Dual-bar demographics */
+  .dem-row2 { display: flex; align-items: center; margin-bottom: 5px; gap: 6px; }
+  .dem-label2 { font-size: 11px; color: var(--text2); width: 72px; flex-shrink: 0; }
+  .dem-pair { display: flex; align-items: center; flex: 1; gap: 3px; }
+  .dem-track2 { flex: 1; height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+  .dem-fill2 { height: 7px; border-radius: 4px; transition: width 0.4s ease; }
+  .case-fill { background: var(--case); }
+  .ctrl-fill { background: var(--ctrl); }
+  .dem-val2 { font-size: 10px; width: 26px; flex-shrink: 0; }
+  .case-val { color: var(--case); text-align: right; }
+  .ctrl-val { color: var(--ctrl); text-align: right; }
+  .dem-col-header { display: flex; align-items: center; margin-bottom: 3px; gap: 6px; }
+
+  /* Demographic bars (legacy single - kept for fallback) */
+  .dem-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .dem-label { font-size: 12px; color: var(--text2); width: 90px; flex-shrink: 0; }
+  .dem-track { flex: 1; height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+  .dem-fill { height: 7px; border-radius: 4px; transition: width 0.4s ease; }
+  .dem-val { font-size: 11px; color: var(--text3); width: 32px; text-align: right; flex-shrink: 0; }
+
+  /* Comparison card */
+  .cmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cmp-card {
+    padding: 10px 10px; border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+  }
+  .cmp-card-label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+  .cmp-card-name { font-size: 12px; font-weight: 500; line-height: 1.3; color: var(--text); }
+  .cmp-card-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* Buffer tabs */
+  .buf-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+  .buf-tab {
+    padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 500;
+    cursor: pointer; border: 1.5px solid var(--border);
+    color: var(--text2); background: transparent; font-family: inherit;
+    transition: background 0.15s;
+  }
+  .buf-tab.active { background: #E8F4E0; border-color: #90C860; color: #2A5A00; }
+  .nbhd-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .nbhd-table th { text-align: left; color: var(--text3); font-weight: 500; padding: 4px 0; font-size: 11px; }
+  .nbhd-table td { padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .nbhd-table tr:last-child td { border-bottom: none; }
+  .nbhd-label { color: var(--text2); }
+  .nbhd-case { color: var(--case); font-weight: 500; text-align: right; }
+  .nbhd-ctrl { color: var(--ctrl); font-weight: 500; text-align: right; }
+  .nbhd-na { color: var(--text3); font-style: italic; text-align: right; }
+  .pending-note {
+    font-size: 11px; color: var(--text3); font-style: italic;
+    background: var(--bg); border-radius: 8px; padding: 8px 10px;
+    border: 1px dashed var(--border-med); line-height: 1.5;
+  }
+
+  /* OSS info */
+  .oss-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 5px 0; border-bottom: 1px solid var(--border); gap: 8px; }
+  .oss-row:last-child { border-bottom: none; }
+  .oss-key { font-size: 12px; color: var(--text2); flex-shrink: 0; }
+  .oss-val { font-size: 12px; color: var(--text); text-align: right; }
+  .sched-chip {
+    display: inline-block; padding: 2px 7px; border-radius: 10px;
+    font-size: 11px; font-weight: 600; margin: 1px 2px;
+  }
+  .chip-all_day   { background: #FEF0EB; color: #8A2A00; }
+  .chip-middle_of_day { background: #E3EDF8; color: #0D3A6E; }
+  .chip-drop_off  { background: #E0F5EE; color: #0A4A32; }
+  .chip-pick_up   { background: #FBEAF0; color: #6E0A32; }
+
+  /* ── Map Tooltip ── */
+  #maptip {
+    position: fixed; z-index: 2000; pointer-events: none;
+    background: var(--surface); border: 1px solid var(--border-med);
+    border-radius: var(--radius); padding: 10px 13px;
+    font-size: 13px; max-width: 240px; line-height: 1.5;
+    box-shadow: var(--shadow-lg); display: none;
+  }
+  #maptip strong { font-size: 13px; font-weight: 600; display: block; margin-bottom: 2px; }
+  #maptip .tip-sub { font-size: 11px; color: var(--text2); }
+
+  /* ── Legend (bottom right of map) ── */
+  #legend {
+    position: absolute; bottom: 14px; left: 14px; z-index: 900;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 11px 13px;
+    font-size: 11px; min-width: 150px;
+    box-shadow: var(--shadow);
+  }
+  .leg-title { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+  .leg-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; color: var(--text2); }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .leg-seg { width: 16px; height: 4px; border-radius: 2px; flex-shrink: 0; }
+  .leg-section { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+
+  /* ── Quartile filter (inside sidebar) ── */
+  .q-filter-row { display: flex; gap: 4px; flex-wrap: wrap; }
+  .q-chip {
+    padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500;
+    cursor: pointer; border: 1.5px solid var(--border-med);
+    color: var(--text2); background: transparent; font-family: inherit;
+    transition: opacity 0.15s;
+  }
+  .q-chip.on { background: var(--case-light); border-color: var(--case-mid); color: #3B2E9E; }
+
+  /* Leaflet overrides */
+  .leaflet-control-zoom { border: 1px solid var(--border) !important; box-shadow: var(--shadow) !important; border-radius: 8px !important; overflow: hidden; }
+  .leaflet-control-zoom a { background: var(--surface) !important; color: var(--text) !important; font-size: 16px !important; line-height: 28px !important; }
+  .leaflet-control-zoom a:hover { background: var(--bg) !important; }
+  .leaflet-control-attribution { font-size: 10px !important; }
+  .leaflet-popup-content-wrapper { border-radius: var(--radius) !important; box-shadow: var(--shadow-lg) !important; }
+
+  /* ── School external links ── */
+  .school-link {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 3px 9px; border-radius: 8px; font-size: 11px; font-weight: 500;
+    text-decoration: none; border: 1.5px solid var(--border-med);
+    color: var(--text2); background: var(--bg);
+    transition: background 0.12s, color 0.12s;
+  }
+  .school-link:hover { background: var(--case-light); color: var(--case); border-color: var(--case-mid); }
+
+
+
+
+  .stats-section { margin-bottom: 10px; }
+  .stats-section:last-child { margin-bottom: 0; }
+  .stats-section-title { font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text3); margin-bottom: 5px; }
+  .stats-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+  .stats-label { color: var(--text2); flex: 1; font-size: 11px; min-width: 80px; white-space: nowrap; }
+  .stats-bar-track { width: 44px; height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+  .stats-bar { height: 5px; border-radius: 3px; }
+  .stats-n { font-size: 11px; font-weight: 500; width: 28px; text-align: right; flex-shrink: 0; }
+  .stats-n.case { color: var(--case); }
+  .stats-n.ctrl { color: var(--ctrl); }
+
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div id="topbar">
+  <div id="topbar-title"><strong>NYC Open Streets for Schools (OSS)</strong> · <em>Spatial Equity Dashboard</em></div>
+  <div id="layer-pills">
+    <div class="lpill pill-case" data-layer="case" onclick="toggleLayer('case',this)">
+      <div class="lpill-dot" style="background:var(--case)"></div> OSS case schools
+    </div>
+    <div class="lpill pill-ctrl" data-layer="ctrl" onclick="toggleLayer('ctrl',this)">
+      <div class="lpill-dot" style="background:var(--ctrl)"></div> Control schools
+    </div>
+    <div class="lpill pill-excl" data-layer="excl" onclick="toggleLayer('excl',this)">
+      <div class="lpill-dot" style="background:var(--excl)"></div> Excluded schools
+    </div>
+    <div class="lpill pill-segs" data-layer="segs" onclick="toggleLayer('segs',this)">
+      <div style="display:flex;gap:2px;align-items:center">
+        <div style="width:5px;height:5px;border-radius:50%;background:#E85C2B"></div>
+        <div style="width:5px;height:5px;border-radius:50%;background:#5B8FD4"></div>
+        <div style="width:5px;height:5px;border-radius:50%;background:#2BAE8F"></div>
+        <div style="width:5px;height:5px;border-radius:50%;background:#D44F8F"></div>
+      </div> OSS street segments
+    </div>
+    <div id="seg-sub-pills" style="display:flex;gap:4px;padding-left:4px;border-left:1.5px solid var(--border-med);margin-left:2px">
+      <div class="lpill lpill-sub" data-cat="all_day" onclick="toggleSegCat('all_day',this)" style="background:#FEF0EB;border-color:#F0A08A;color:#8A2A00;font-size:11px;padding:3px 8px">All day</div>
+      <div class="lpill lpill-sub" data-cat="middle_of_day" onclick="toggleSegCat('middle_of_day',this)" style="background:#E3EDF8;border-color:#8AAFE8;color:#0D3A6E;font-size:11px;padding:3px 8px">Mid-day</div>
+      <div class="lpill lpill-sub" data-cat="drop_off" onclick="toggleSegCat('drop_off',this)" style="background:#E0F5EE;border-color:#6AC8A8;color:#0A4A32;font-size:11px;padding:3px 8px">Drop-off</div>
+      <div class="lpill lpill-sub" data-cat="pick_up" onclick="toggleSegCat('pick_up',this)" style="background:#FBEAF0;border-color:#E898B8;color:#6E0A32;font-size:11px;padding:3px 8px">Pick-up</div>
+    </div>
+    <div class="lpill pill-play" data-layer="playground" onclick="toggleLayer('playground',this)" style="background:#FDF5E0;border-color:#E8C84A;color:#5A3A00">
+      <div class="lpill-dot" style="background:#C8A020"></div> Playgrounds
+    </div>
+    <div class="lpill pill-buf" data-layer="buf" onclick="toggleLayer('buf',this)">
+      <div class="lpill-dot" style="background:transparent;border:2px dashed #90C860;width:10px;height:10px"></div> Buffers
+    </div>
+  </div>
+  <div id="topbar-right">
+    <button id="clear-btn" onclick="clearSelection()">Clear selection</button>
+  </div>
+</div>
+
+<!-- Main layout -->
+<div id="app">
+  <div id="map"></div>
+  <div id="sidebar">
+    <!-- Empty state -->
+    <div id="sb-empty">
+      <div class="hint-icon">📍</div>
+      <p>Click any school on the map to see demographics, matched pair, and program details.</p>
+      <div style="margin-top:16px;font-size:12px;color:var(--text3)">
+        Or view the <span style="color:var(--case);font-weight:500;cursor:pointer"
+          onclick="document.getElementById('sb-empty').style.display='none';
+                   document.getElementById('sb-content').classList.add('show');
+                   setTab(3);">Matching Summary →</span>
+      </div>
+    </div>
+
+    <!-- School detail -->
+    <div id="sb-content">
+      <div id="sb-header">
+        <div id="sb-school-badge"></div>
+        <div id="sb-school-name"></div>
+        <div id="sb-school-meta"></div>
+        <div id="sb-school-links" style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"></div>
+        <div id="sb-match-link" onclick="jumpToMatch()"></div>
+      </div>
+
+      <div id="sb-tabs">
+        <div class="sb-tab active" onclick="setTab(0)">Demographics</div>
+        <div class="sb-tab" onclick="setTab(1)">Neighborhood</div>
+        <div class="sb-tab" onclick="setTab(2)">OSS Info</div>
+        <div class="sb-tab" onclick="setTab(3)">Summary</div>
+      </div>
+
+      <!-- Tab 0: Demographics -->
+      <div class="sb-panel active" id="tab-dem">
+        <div>
+          <div class="sb-section-title">Enrollment & race/ethnicity</div>
+          <div id="dem-enroll" class="dem-row"></div>
+          <div id="dem-bars"></div>
+        </div>
+        <div>
+          <div class="sb-section-title">Other indicators</div>
+          <div id="dem-other"></div>
+        </div>
+        <div>
+          <div class="sb-section-title">Matched pair comparison</div>
+          <div class="cmp-grid" id="cmp-cards"></div>
+        </div>
+      </div>
+
+      <!-- Tab 1: Neighborhood -->
+      <div class="sb-panel" id="tab-nbhd">
+        <div>
+          <div class="sb-section-title">Buffer distance</div>
+          <div class="buf-tabs">
+            <button class="buf-tab active" onclick="setBuf(this,'250')">250 m</button>
+            <button class="buf-tab" onclick="setBuf(this,'500')">500 m</button>
+            <button class="buf-tab" onclick="setBuf(this,'800')">800 m</button>
+          </div>
+          <table class="nbhd-table" id="nbhd-table">
+            <thead><tr>
+              <th style="width:48%">Indicator</th>
+              <th class="nbhd-case" style="width:26%">Case</th>
+              <th class="nbhd-ctrl" style="width:26%">Control</th>
+            </tr></thead>
+            <tbody id="nbhd-body"></tbody>
+          </table>
+        </div>
+        <div class="pending-note" id="nbhd-note">
+          Neighborhood characteristics will be populated with ACS + health data. Values shown as N/A are placeholders pending data integration.
+        </div>
+      </div>
+
+      <!-- Tab 2: OSS Info -->
+      <div class="sb-panel" id="tab-oss">
+        <div id="oss-program-info"></div>
+        <div id="oss-street-info"></div>
+        <div id="oss-outdoor-info"></div>
+      </div>
+
+      <!-- Tab 3: Summary -->
+      <div class="sb-panel" id="tab-sum">
+        <div>
+          <div class="sb-section-title">School type · <span style="color:var(--case)">case</span> / <span style="color:var(--ctrl)">control</span></div>
+          <div class="stats-row"><span class="stats-label">Public (DOE)</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:89%;background:var(--case)"></div></div>
+            <span class="stats-n case">51</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:84%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">48</span>
+          </div>
+          <div class="stats-row"><span class="stats-label">Charter</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:11%;background:var(--case)"></div></div>
+            <span class="stats-n case">6</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:16%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">9</span>
+          </div>
+          <div class="stats-row"><span class="stats-label">Non-public</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:0%"></div></div>
+            <span class="stats-n" style="color:var(--text3)">—</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:0%"></div></div>
+            <span class="stats-n" style="color:var(--excl)">12*</span>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;font-style:italic">*excluded from analysis</div>
+        </div>
+        <div>
+          <div class="sb-section-title">Grade level · <span style="color:var(--case)">case</span> / <span style="color:var(--ctrl)">control</span></div>
+          <div class="stats-row"><span class="stats-label">Elementary</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:54%;background:var(--case)"></div></div>
+            <span class="stats-n case">31</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:54%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">31</span>
+          </div>
+          <div class="stats-row"><span class="stats-label">Jr High / MS</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:14%;background:var(--case)"></div></div>
+            <span class="stats-n case">8</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:14%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">8</span>
+          </div>
+          <div class="stats-row"><span class="stats-label">K–8</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:12%;background:var(--case)"></div></div>
+            <span class="stats-n case">7</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:12%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">7</span>
+          </div>
+          <div class="stats-row"><span class="stats-label">High school</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:12%;background:var(--case)"></div></div>
+            <span class="stats-n case">7</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:12%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">7</span>
+          </div>
+          <div class="stats-row"><span class="stats-label">K–12</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:5%;background:var(--case)"></div></div>
+            <span class="stats-n case">3</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:5%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">3</span>
+          </div>
+          <div class="stats-row"><span class="stats-label">Secondary</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:2%;background:var(--case)"></div></div>
+            <span class="stats-n case">1</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:2%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">1</span>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;font-style:italic">Matched by grade level (57 pairs)</div>
+        </div>
+        <div>
+          <div class="sb-section-title">% Hispanic quartile · <span style="color:var(--case)">case</span> / <span style="color:var(--ctrl)">control</span></div>
+          <div class="stats-row"><span class="stats-label">Q1 (≤29%)</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:18%;background:var(--case)"></div></div>
+            <span class="stats-n case">10</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:18%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">10</span>
+          </div>
+          <div class="stats-row"><span class="stats-label">Q2 (30–52%)</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:26%;background:var(--case)"></div></div>
+            <span class="stats-n case">15</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:26%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">15</span>
+          </div>
+          <div class="stats-row"><span class="stats-label">Q3 (53–75%)</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:16%;background:var(--case)"></div></div>
+            <span class="stats-n case">9</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:16%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">9</span>
+          </div>
+          <div class="stats-row"><span class="stats-label">Q4 (>75%)</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:40%;background:var(--case)"></div></div>
+            <span class="stats-n case">23</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:40%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">23</span>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;font-style:italic">Matched by quartile (57 pairs)</div>
+        </div>
+        <div>
+          <div class="sb-section-title">Outdoor space</div>
+          <div class="stats-row"><span class="stats-label">Has playground</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:74%;background:var(--case)"></div></div>
+            <span class="stats-n case">42</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:74%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">42</span>
+          </div>
+          <div class="stats-row"><span class="stats-label">No playground</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:26%;background:var(--case)"></div></div>
+            <span class="stats-n case">15</span>
+            <div class="stats-bar-track"><div class="stats-bar" style="width:26%;background:var(--ctrl)"></div></div>
+            <span class="stats-n ctrl">15</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /sb-content -->
+
+    <!-- Q filter at bottom of sidebar -->
+    <div style="padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0">
+      <div class="sb-section-title" style="margin-bottom:6px">Filter by % Hispanic quartile</div>
+      <div class="q-filter-row" id="q-filters"></div>
+    </div>
+  </div><!-- /sidebar -->
+</div>
+
+<!-- Map tooltip -->
+<div id="maptip"></div>
+
+<!-- Legend -->
+<div id="legend">
+  <div class="leg-title">Schools</div>
+  <div class="leg-row">
+    <svg width="14" height="20" viewBox="0 0 100 100" style="flex-shrink:0"><path d="M50,0C30.016,0,13.816,16.2,13.816,36.185C13.816,64.987,50,100,50,100s36.184-35.013,36.184-63.815C86.184,16.2,69.984,0,50,0z M50,62.588c-14.583,0-26.404-11.821-26.404-26.403C23.596,21.602,35.417,9.78,50,9.78c14.582,0,26.404,11.821,26.404,26.404C76.404,50.767,64.582,62.588,50,62.588z" fill="#5B4FCF"/></svg>
+    OSS case school
+  </div>
+  <div class="leg-row">
+    <svg width="14" height="20" viewBox="0 0 100 100" style="flex-shrink:0"><path d="M50,0C30.016,0,13.816,16.2,13.816,36.185C13.816,64.987,50,100,50,100s36.184-35.013,36.184-63.815C86.184,16.2,69.984,0,50,0z M50,62.588c-14.583,0-26.404-11.821-26.404-26.403C23.596,21.602,35.417,9.78,50,9.78c14.582,0,26.404,11.821,26.404,26.404C76.404,50.767,64.582,62.588,50,62.588z" fill="#1A8A6B"/></svg>
+    Control school
+  </div>
+  <div class="leg-row">
+    <svg width="14" height="20" viewBox="0 0 100 100" style="flex-shrink:0"><path d="M50,0C30.016,0,13.816,16.2,13.816,36.185C13.816,64.987,50,100,50,100s36.184-35.013,36.184-63.815C86.184,16.2,69.984,0,50,0z M50,62.588c-14.583,0-26.404-11.821-26.404-26.403C23.596,21.602,35.417,9.78,50,9.78c14.582,0,26.404,11.821,26.404,26.404C76.404,50.767,64.582,62.588,50,62.588z" fill="#5A5A54"/></svg>
+    Excluded (non-public)
+  </div>
+  <div class="leg-section" style="border-top:none;padding-top:0;margin-top:0">
+    <div style="font-size:9px;color:var(--text3);margin-bottom:6px">
+      Icon: <a href="https://thenounproject.com/icon/school-map-pin-1661311/" target="_blank"
+        style="color:var(--text3)">School Map Pin</a> by Noun Project (CC BY 3.0)
+    </div>
+  </div>
+  <div class="leg-section">
+    <div class="leg-title">OSS Segments (by schedule)</div>
+    <div class="leg-row"><div class="leg-seg" style="background:var(--seg-all)"></div>All day</div>
+    <div class="leg-row"><div class="leg-seg" style="background:var(--seg-mid)"></div>Middle of day</div>
+    <div class="leg-row"><div class="leg-seg" style="background:var(--seg-drop)"></div>Drop-off</div>
+    <div class="leg-row"><div class="leg-seg" style="background:var(--seg-pick)"></div>Pick-up</div>
+  </div>
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data/dashboard_data.js"></script>
+<script>
+
+// ── Constants ──────────────────────────────────────────────────────────────
+const COLORS = {
+  case: '#5B4FCF', case_dim: '#B8B0EC',
+  ctrl: '#1A8A6B', ctrl_dim: '#8ECBB8',
+  excl: '#5A5A54', excl_dim: '#A0A09A',
+  sel:  '#E85C2B',
+  seg: { all_day:'#E85C2B', middle_of_day:'#5B8FD4', drop_off:'#2BAE8F', pick_up:'#D44F8F', default:'#999' }
+};
+const Q_LABELS = { Q1:'Q1 (≤29%)', Q2:'Q2 (30–52%)', Q3:'Q3 (53–75%)', Q4:'Q4 (>75%)' };
+const BUF_RADII = { '250': 250, '500': 500, '800': 800 };
+const BUF_COLORS = ['#9FCB5A','#6A9E30','#3A6B10'];
+
+// ── State ──────────────────────────────────────────────────────────────────
+let selectedSchool = null;
+let activeQ = new Set(['Q1','Q2','Q3','Q4']);
+let layers = { case:true, ctrl:true, excl:true, segs:true, buf:false, playground:false };
+let segCats = new Set(['all_day','middle_of_day','drop_off','pick_up']); // active seg categories
+let bufCircles = [];
+let matchLine = null;
+let markerMap = {}; // entity_name -> leaflet marker
+let segLayerMap = {}; // seg.id -> leaflet polyline
+let playgroundMarkers = [];
+
+// ── Map init ───────────────────────────────────────────────────────────────
+const NYC_BOUNDS = L.latLngBounds(
+  L.latLng(40.477, -74.260),  // SW corner
+  L.latLng(40.918, -73.699)   // NE corner
+);
+const map = L.map('map', {
+  zoomControl: true, preferCanvas: true,
+  maxBounds: NYC_BOUNDS, maxBoundsViscosity: 0.92,
+  minZoom: 10, maxZoom: 18
+}).setView([40.72, -73.94], 11);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> &copy; <a href="https://carto.com">CARTO</a>',
+  subdomains: 'abcd', maxZoom: 19
+}).addTo(map);
+
+// ── Icon factory ───────────────────────────────────────────────────────────
+// School map-pin icon path (Noun Project #1661311, CC BY 3.0, The Noun Project)
+const SCHOOL_PIN_PATH = `M50,0C30.016,0,13.816,16.2,13.816,36.185C13.816,64.987,50,100,50,100s36.184-35.013,36.184-63.815
+  C86.184,16.2,69.984,0,50,0z M50,62.588c-14.583,0-26.404-11.821-26.404-26.403C23.596,21.602,35.417,9.78,50,9.78
+  c14.582,0,26.404,11.821,26.404,26.404C76.404,50.767,64.582,62.588,50,62.588z M68.518,33.08L50.542,20.273
+  c-0.018-0.012-0.035-0.023-0.053-0.034v-1.592c1.541-0.84,3.081,1.007,4.621,0.055c0-1.081,0-2.161,0-3.242
+  c-1.54,0.953-3.08-0.895-4.621-0.055v-0.05c0-0.097-0.079-0.176-0.176-0.176h-0.625c-0.097,0-0.176,0.079-0.176,0.176v4.884
+  c-0.018,0.011-0.036,0.022-0.053,0.034L31.483,33.08c-0.331,0.236-0.471,0.658-0.348,1.044c0.124,0.387,0.483,0.649,0.889,0.649
+  h1.765v13.213h-0.104c-0.426,0-0.771,0.345-0.771,0.772v0.978c0,0.426,0.345,0.771,0.771,0.771h12.258h8.114h12.258
+  c0.427,0,0.771-0.346,0.771-0.771v-0.978c0-0.427-0.345-0.772-0.771-0.772h-0.104V34.773h1.765c0.406,0,0.765-0.263,0.89-0.649
+  C68.988,33.738,68.848,33.316,68.518,33.08z M39.13,45.327h-2.916V42.41h2.916V45.327z M39.13,40.961h-2.916v-2.916h2.916V40.961z
+  M43.509,45.327h-2.916V42.41h2.916V45.327z M43.509,40.961h-2.916v-2.916h2.916V40.961z M53.729,47.108h-7.457v-7.702
+  c0-1.078,0.875-1.953,1.953-1.953h3.551c1.078,0,1.953,0.875,1.953,1.953V47.108z M50,34.609c-2.412,0-4.368-1.955-4.368-4.368
+  c0-2.412,1.956-4.368,4.368-4.368s4.367,1.956,4.367,4.368C54.367,32.654,52.412,34.609,50,34.609z M59.406,45.327H56.49V42.41
+  h2.916V45.327z M59.406,40.961H56.49v-2.916h2.916V40.961z M63.786,45.327H60.87V42.41h2.916V45.327z M63.786,40.961H60.87v-2.916
+  h2.916V40.961z M52.881,29.948c0.289,0,0.523,0.234,0.523,0.523s-0.234,0.523-0.523,0.523h-2.93
+  c-0.019,0-0.036-0.001-0.054-0.003c-0.264-0.027-0.47-0.25-0.47-0.521v-2.93c0-0.289,0.234-0.523,0.523-0.523
+  c0.289,0,0.523,0.234,0.523,0.523v2.406H52.881z`;
+
+function makeIcon(color, size, selected, type) {
+  // Pin is drawn in a 100x100 space; scale to desired pixel size
+  // The pin is taller than wide — use size as height, width ~0.72 * height
+  const h = size || 28;
+  const w = Math.round(h * 0.72);
+  // Glow ring behind pin when selected
+  const glow = selected
+    ? `<ellipse cx="${w/2}" cy="${h*0.36}" rx="${w*0.52}" ry="${h*0.52}"
+         fill="${color}" opacity="0.18"/>
+       <ellipse cx="${w/2}" cy="${h*0.36}" rx="${w*0.46}" ry="${h*0.46}"
+         fill="none" stroke="${COLORS.sel}" stroke-width="2" opacity="0.8"/>`
+    : '';
+  // Dimmed icons are smaller
+  const opacity = (type === 'excl') ? 0.75 : 1;
+  return L.divIcon({
+    className: '',
+    html: `<svg width="${w}" height="${h}" viewBox="0 0 100 100"
+               style="overflow:visible;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.25))"
+               opacity="${opacity}">
+      ${glow}
+      <path d="${SCHOOL_PIN_PATH}" fill="${color}"/>
+    </svg>`,
+    iconSize: [w, h],
+    iconAnchor: [w/2, h]   // anchor at the bottom tip of the pin
+  });
+}
+
+// ── Tooltip ────────────────────────────────────────────────────────────────
+const tip = document.getElementById('maptip');
+function showTip(e, html) {
+  tip.innerHTML = html; tip.style.display = 'block';
+  moveTip(e);
+}
+function moveTip(e) {
+  const x = e.clientX + 16, y = e.clientY - 10;
+  tip.style.left = Math.min(x, window.innerWidth - 260) + 'px';
+  tip.style.top  = Math.max(y, 8) + 'px';
+}
+function hideTip() { tip.style.display = 'none'; }
+
+// ── Permanent match lines (drawn at startup) ─────────────────────────────
+const allMatchLines = [];
+const drawnPairs = new Set();
+DASHBOARD_DATA.schools.filter(s => s.t === 'case').forEach(s => {
+  const partner = DASHBOARD_DATA.schools.find(x => x.g === s.g && x.t === 'ctrl');
+  if (!partner || drawnPairs.has(s.g)) return;
+  drawnPairs.add(s.g);
+  const pl = L.polyline([[s.lat, s.lon],[partner.lat, partner.lon]], {
+    color: '#B0A8E8', weight: 1.5, opacity: 0.45, dashArray: '4 5', interactive: false
+  }).addTo(map);
+  allMatchLines.push({ line: pl, group: s.g });
+});
+
+// ── School markers ─────────────────────────────────────────────────────────
+DASHBOARD_DATA.schools.forEach(s => {
+  const color = s.t === 'case' ? COLORS.case : COLORS.ctrl;
+  const m = L.marker([s.lat, s.lon], { icon: makeIcon(color, 28, false, s.t) }).addTo(map);
+  markerMap[s.en] = m;
+
+  m.on('mouseover', e => {
+    const role = s.t === 'case'
+      ? `<span style="color:${COLORS.case};font-weight:600">OSS case</span>`
+      : `<span style="color:${COLORS.ctrl};font-weight:600">Control</span>`;
+    const tipPartner = DASHBOARD_DATA.schools.find(x => x.g === s.g && x.en !== s.en);
+    const tipMatch = tipPartner ? `<div class="tip-sub" style="margin-top:3px;color:var(--case)">↔ Matched: <em>${tipPartner.n}</em></div>` : '';
+    showTip(e.originalEvent, `<strong>${s.n}</strong>
+      <div class="tip-sub">${role} · ${s.org}</div>
+      <div class="tip-sub">${s.gc}</div>
+      <div class="tip-sub">% Hispanic: ${s.ph ? s.ph+'%' : '—'} · ${Q_LABELS[s.q]||s.q}</div>
+      <div class="tip-sub">Enrollment: ${s.enroll} · Playground: ${s.pg ? 'Yes' : 'No'}</div>
+      ${tipMatch}`);
+  });
+  m.on('mousemove', e => moveTip(e.originalEvent));
+  m.on('mouseout', hideTip);
+  m.on('click', () => selectSchool(s));
+});
+
+// Excluded school markers
+DASHBOARD_DATA.excluded.forEach(s => {
+  const m = L.marker([s.lat, s.lon], { icon: makeIcon(COLORS.excl, 22, false, 'excl') }).addTo(map);
+  markerMap['excl_'+s.n] = m;
+  m.on('mouseover', e => showTip(e.originalEvent,
+    `<strong>${s.n}</strong><div class="tip-sub"><span style="color:${COLORS.excl};font-weight:600">Excluded</span> · Non-public</div><div class="tip-sub">${s.addr}</div>`));
+  m.on('mousemove', e => moveTip(e.originalEvent));
+  m.on('mouseout', hideTip);
+});
+
+// ── Segment polylines ──────────────────────────────────────────────────────
+DASHBOARD_DATA.segments.forEach(seg => {
+  if (!seg.lines || seg.lines.length === 0) return;
+  const sched = seg.sched && seg.sched.length > 0 ? seg.sched[0] : null;
+  const cat = sched ? sched.cat : 'default';
+  const color = COLORS.seg[cat] || COLORS.seg.default;
+  const isExcl = seg.inst_type === 'NON-PUBLIC SCHOOLS';
+  const lls = seg.lines.map(line => line.map(c => [c[1], c[0]]));
+  const pl = L.polyline(lls, { color, weight: 4, opacity: 0.82, lineCap: 'round' }).addTo(map);
+  segLayerMap[seg.id] = { pl, cat, isExcl };
+
+  pl.on('mouseover', e => {
+    const schedHtml = (seg.sched||[]).map(sc =>
+      `<div class="tip-sub"><span class="sched-chip chip-${sc.cat}" style="font-size:10px;padding:1px 5px;border-radius:8px">${sc.cat.replace(/_/g,' ')}</span> ${sc.days} · ${sc.open}–${sc.close}</div>`
+    ).join('');
+    showTip(e.originalEvent, `<strong>${seg.school_name || seg.on_street}</strong>
+      <div class="tip-sub">${seg.on_street}${seg.from_street?', '+seg.from_street+' → '+seg.to_street:''}</div>
+      <div class="tip-sub">${seg.borough}</div>
+      ${schedHtml || '<div class="tip-sub" style="font-style:italic">No schedule data</div>'}`);
+    pl.setStyle({ weight: 7, opacity: 1 });
+  });
+  pl.on('mousemove', e => moveTip(e.originalEvent));
+  pl.on('mouseout', () => { hideTip(); pl.setStyle({ weight: 4, opacity: 0.82 }); });
+});
+
+// ── Q-filter pills ─────────────────────────────────────────────────────────
+const qContainer = document.getElementById('q-filters');
+['Q1','Q2','Q3','Q4'].forEach(q => {
+  const btn = document.createElement('button');
+  btn.className = 'q-chip on'; btn.textContent = Q_LABELS[q];
+  btn.onclick = () => {
+    if (activeQ.has(q)) { activeQ.delete(q); btn.classList.remove('on'); }
+    else { activeQ.add(q); btn.classList.add('on'); }
+    refreshMarkerVisibility();
+  };
+  qContainer.appendChild(btn);
+});
+
+function refreshMarkerVisibility() {
+  DASHBOARD_DATA.schools.forEach(s => {
+    const m = markerMap[s.en]; if (!m) return;
+    const show = layers[s.t] && activeQ.has(s.q);
+    if (show) m.addTo(map); else map.removeLayer(m);
+  });
+  DASHBOARD_DATA.excluded.forEach(s => {
+    const m = markerMap['excl_'+s.n]; if (!m) return;
+    if (layers.excl) m.addTo(map); else map.removeLayer(m);
+  });
+  Object.entries(segLayerMap).forEach(([oid, entry]) => {
+    const { pl, cat, isExcl } = entry;
+    const show = layers.segs && segCats.has(cat) &&
+                 !(isExcl && !layers.excl);
+    if (show) pl.addTo(map); else map.removeLayer(pl);
+  });
+  // Hide/show match lines based on layer visibility
+  allMatchLines.forEach(({ line, group }) => {
+    const caseS = DASHBOARD_DATA.schools.find(x => x.g === group && x.t === 'case');
+    const visible = caseS && layers.case && layers.ctrl && activeQ.has(caseS.q);
+    line.setStyle({ opacity: visible ? 0.45 : 0 });
+  });
+}
+
+// ── Layer toggle ───────────────────────────────────────────────────────────
+function toggleLayer(name, el) {
+  layers[name] = !layers[name];
+  el.classList.toggle('off', !layers[name]);
+  refreshMarkerVisibility();
+  if (name === 'buf') refreshBuffers();
+  if (name === 'playground') refreshPlaygrounds();
+}
+
+// ── Buffer circles ─────────────────────────────────────────────────────────
+let activeBufSchool = null;
+function refreshBuffers() {
+  bufCircles.forEach(c => map.removeLayer(c));
+  bufCircles = [];
+  if (!layers.buf || !activeBufSchool) return;
+  const schools = [activeBufSchool];
+  const partner = DASHBOARD_DATA.schools.find(x => x.g === activeBufSchool.g && x.en !== activeBufSchool.en);
+  if (partner) schools.push(partner);
+  const colors = ['#9FCB5A','#6A9E30','#3A6B10'];
+  const radii = [800, 500, 250];
+  schools.forEach((s, si) => {
+    radii.forEach((r, i) => {
+      const c = L.circle([s.lat, s.lon], {
+        radius: r, color: colors[2-i], weight: 1.5,
+        fillColor: colors[2-i], fillOpacity: si === 0 ? 0.07 : 0.04,
+        dashArray: si === 0 ? '5 4' : '3 6',
+        opacity: si === 0 ? 0.9 : 0.5
+      }).addTo(map);
+      bufCircles.push(c);
+    });
+  });
+}
+
+// ── Select school ─────────────────────────────────────────────────────────
+function selectSchool(s) {
+  console.log('selectSchool called for:', s.n, s.t, 'group:', s.g);
+  if (selectedSchool && selectedSchool.en === s.en) { console.log('already selected, returning'); return; }
+  _clearSelection(true);
+  selectedSchool = s;
+  activeBufSchool = s;
+
+  // Highlight selected marker
+  const m = markerMap[s.en];
+  if (m) m.setIcon(makeIcon(s.t === 'case' ? COLORS.case : COLORS.ctrl, 32, true, s.t));
+
+  // Find matched partner
+  const partner = DASHBOARD_DATA.schools.find(x => x.g === s.g && x.en !== s.en);
+
+  // Draw match line
+  if (partner) {
+    if (matchLine) map.removeLayer(matchLine);
+    matchLine = L.polyline([[s.lat, s.lon],[partner.lat, partner.lon]], {
+      color: '#E85C2B', weight: 2, opacity: 0.7, dashArray: '6 4'
+    }).addTo(map);
+    // Highlight partner too
+    const pm = markerMap[partner.en];
+    if (pm) pm.setIcon(makeIcon(partner.t === 'case' ? COLORS.case : COLORS.ctrl, 30, true, partner.t));
+  }
+
+  // Dim all other markers
+  DASHBOARD_DATA.schools.forEach(x => {
+    if (x.en === s.en || (partner && x.en === partner.en)) return;
+    const xm = markerMap[x.en];
+    if (xm) xm.setIcon(makeIcon(x.t === 'case' ? COLORS.case_dim : COLORS.ctrl_dim, 20, false, x.t));
+  });
+
+  // Highlight selected pair's match line, dim others
+  allMatchLines.forEach(({ line, group }) => {
+    if (group === s.g) {
+      line.setStyle({ color: '#E85C2B', weight: 3, opacity: 0.9, dashArray: '6 4' });
+      line.bringToFront();
+    } else {
+      line.setStyle({ color: '#C8C0F0', weight: 1, opacity: 0.18, dashArray: '4 5' });
+    }
+  });
+
+  // Buffers + playgrounds
+  refreshBuffers();
+  refreshPlaygrounds();
+
+  // Fit map to pair
+  if (partner) {
+    map.fitBounds([[s.lat,s.lon],[partner.lat,partner.lon]], { padding:[80,80], maxZoom:15 });
+  }
+
+  // Pair info lives in the sidebar only - no bottom card needed
+
+  // Show sidebar first, then populate
+  document.getElementById('sb-empty').style.display = 'none';
+  document.getElementById('sb-content').classList.add('show');
+  try {
+    populateSidebar(s, partner);
+  } catch(e) {
+    console.error('populateSidebar error:', e);
+    document.getElementById('sb-school-name').textContent = s.n;
+    document.getElementById('sb-school-meta').textContent = 'Error loading details — check console.';
+  }
+}
+
+// ── Populate sidebar ───────────────────────────────────────────────────────
+function populateSidebar(s, partner) {
+  // Badge
+  const badge = document.getElementById('sb-school-badge');
+  if (s.t === 'case') {
+    badge.style.background = 'var(--case-light)'; badge.style.color = '#3B2E9E';
+    badge.style.border = '1.5px solid var(--case-mid)';
+    badge.innerHTML = '🟣 OSS Case School';
+  } else {
+    badge.style.background = 'var(--ctrl-light)'; badge.style.color = '#0D5A44';
+    badge.style.border = '1.5px solid var(--ctrl-mid)';
+    badge.innerHTML = '🟢 Control School';
+  }
+
+  document.getElementById('sb-school-name').textContent = s.n;
+  document.getElementById('sb-school-meta').innerHTML =
+    `${s.org} · ${s.gc} · ${s.enroll} enrolled · ${s.boro}` +
+    (s.pg ? ' · <span style="color:var(--ctrl)">Playground ✓</span>' : '');
+
+  // Match link
+  const ml = document.getElementById('sb-match-link');
+  if (partner) {
+    ml.style.display = 'inline-flex';
+    const arrow = s.t === 'case' ? '→' : '←';
+    ml.innerHTML = `${arrow} Matched ${partner.t === 'case' ? 'case' : 'control'}: ${partner.n}`;
+    ml._partner = partner;
+  } else {
+    ml.style.display = 'none';
+  }
+
+  // Google Maps + Street View links
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.n+', '+s.addr+', '+s.boro+', NY')}`;
+  const svUrl   = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${s.lat},${s.lon}&fov=90&heading=0&pitch=0`;
+  document.getElementById('sb-school-links').innerHTML =
+    `<a href="${mapsUrl}" target="_blank" class="school-link">📍 Google Maps</a>
+     <a href="${svUrl}"   target="_blank" class="school-link">🏫 Street View</a>`;
+
+  populateDemographics(s, partner);
+  populateNeighborhood(s, partner, '250');
+  populateOSS(s);
+}
+
+function pct(v) { return v !== null && v !== undefined ? Math.round(v) + '%' : '—'; }
+function bar(label, val, color, id) {
+  const w = val ? Math.min(Math.round(val), 100) : 0;
+  return `<div class="dem-row">
+    <div class="dem-label">${label}</div>
+    <div class="dem-track"><div class="dem-fill" style="width:${w}%;background:${color}"></div></div>
+    <div class="dem-val">${pct(val)}</div>
+  </div>`;
+}
+
+function dualBar(label, caseVal, ctrlVal) {
+  const wc = caseVal ? Math.min(Math.round(caseVal), 100) : 0;
+  const wx = ctrlVal ? Math.min(Math.round(ctrlVal), 100) : 0;
+  return `<div class="dem-row2">
+    <div class="dem-label2">${label}</div>
+    <div class="dem-pair">
+      <div class="dem-track2"><div class="dem-fill2 case-fill" style="width:${wc}%"></div></div>
+      <span class="dem-val2 case-val">${pct(caseVal)}</span>
+      <div class="dem-track2"><div class="dem-fill2 ctrl-fill" style="width:${wx}%"></div></div>
+      <span class="dem-val2 ctrl-val">${pct(ctrlVal)}</span>
+    </div>
+  </div>`;
+}
+
+function populateDemographics(s, partner) {
+  const caseS = s.t === 'case' ? s : (partner || s);
+  const ctrlS = s.t === 'ctrl' ? s : (partner || null);
+
+  // Enrollment header
+  const ctrlEnroll = ctrlS ? `<span style="color:var(--ctrl);font-weight:600;margin-left:16px">${ctrlS.enroll}</span><span style="color:var(--text2);font-size:11px;margin-left:4px">control</span>` : '';
+  document.getElementById('dem-enroll').innerHTML =
+    `<span style="color:var(--case);font-weight:600">${caseS.enroll}</span><span style="color:var(--text2);font-size:11px;margin-left:4px">case</span>${ctrlEnroll}`;
+
+  // Column headers
+  const colHeader = `<div class="dem-col-header">
+    <div class="dem-label2"></div>
+    <div class="dem-pair">
+      <div style="flex:1;text-align:center;font-size:10px;font-weight:600;color:var(--case);letter-spacing:0.04em">CASE</div>
+      <div style="width:28px"></div>
+      <div style="flex:1;text-align:center;font-size:10px;font-weight:600;color:var(--ctrl);letter-spacing:0.04em">CONTROL</div>
+      <div style="width:28px"></div>
+    </div>
+  </div>`;
+
+  document.getElementById('dem-bars').innerHTML = colHeader + [
+    dualBar('Hispanic',   caseS.ph,   ctrlS?.ph),
+    dualBar('Black',      caseS.pb,   ctrlS?.pb),
+    dualBar('White',      caseS.pw,   ctrlS?.pw),
+    dualBar('Asian',      caseS.pa,   ctrlS?.pa),
+    dualBar('Multiracial',caseS.pm_r, ctrlS?.pm_r),
+    dualBar('Am. Indian', caseS.pai,  ctrlS?.pai),
+  ].join('');
+
+  document.getElementById('dem-other').innerHTML = colHeader + [
+    dualBar('Econ. disadv.', caseS.pec, ctrlS?.pec),
+    dualBar('ELL',           caseS.pe,  ctrlS?.pe),
+    dualBar('Disab.',        caseS.ps,  ctrlS?.ps),
+    dualBar('Female',        caseS.pf,  ctrlS?.pf),
+  ].join('');
+
+  // School name cards (simplified — bars already show the comparison)
+  if (partner) {
+    document.getElementById('cmp-cards').innerHTML = `
+      <div class="cmp-card" style="border-left:3px solid var(--case);background:var(--case-light)">
+        <div class="cmp-card-label" style="color:var(--case)">Case school</div>
+        <div class="cmp-card-name">${caseS.n}</div>
+        <div class="cmp-card-sub">${caseS.gc} · ${caseS.org} · ${caseS.enroll} students</div>
+      </div>
+      <div class="cmp-card" style="border-left:3px solid var(--ctrl);background:var(--ctrl-light)">
+        <div class="cmp-card-label" style="color:var(--ctrl)">Control school</div>
+        <div class="cmp-card-name">${ctrlS.n}</div>
+        <div class="cmp-card-sub">${ctrlS.gc} · ${ctrlS.org} · ${ctrlS.enroll} students</div>
+      </div>`;
+  }
+}
+
+function populateNeighborhood(s, partner, bufSize) {
+  const caseS = s.t === 'case' ? s : partner;
+  const ctrlS = s.t === 'case' ? partner : s;
+  const rows = [
+    ['% poverty', null, null],
+    ['% fem.-headed HH', null, null],
+    ['Median HH income', null, null],
+    ['Child health index', null, null],
+    ['Park access', null, null],
+  ];
+  const tbody = document.getElementById('nbhd-body');
+  tbody.innerHTML = rows.map(([label, cv, xv]) => `
+    <tr>
+      <td class="nbhd-label">${label}</td>
+      <td class="${cv !== null ? 'nbhd-case' : 'nbhd-na'}">${cv !== null ? cv : 'N/A'}</td>
+      <td class="${xv !== null ? 'nbhd-ctrl' : 'nbhd-na'}">${xv !== null ? xv : 'N/A'}</td>
+    </tr>`).join('');
+}
+
+function populateOSS(s) {
+  const isCase = s.t === 'case';
+  let html = '';
+
+  if (isCase) {
+    // Program info
+    html += `<div>
+      <div class="sb-section-title">Program</div>
+      <div class="oss-row"><span class="oss-key">Status</span><span class="oss-val" style="color:var(--ctrl);font-weight:500">Active</span></div>
+      <div class="oss-row"><span class="oss-key">Years in program</span><span class="oss-val" style="font-style:italic;color:var(--text3)">${s.yrs !== null ? s.yrs+' yrs' : 'Pending city data'}</span></div>
+    </div>`;
+
+    // Street segments
+    const mySegs = DASHBOARD_DATA.segments.filter(sg => s.segs.includes(sg.id));
+    if (mySegs.length > 0) {
+      html += `<div><div class="sb-section-title">Street segments (${mySegs.length})</div>`;
+      mySegs.forEach(sg => {
+        const schedHtml = (sg.sched||[]).map(sc =>
+          `<span class="sched-chip chip-${sc.cat}">${sc.cat.replace(/_/g,' ')}</span> ${sc.days} · ${sc.open}–${sc.close}`
+        ).join('<br>');
+        html += `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:12px;font-weight:500">${sg.on_street}</div>
+          <div style="font-size:11px;color:var(--text2)">${sg.from_street} → ${sg.to_street}</div>
+          <div style="font-size:11px;color:var(--text2)">${sg.borough}</div>
+          <div style="margin-top:4px;font-size:11px">${schedHtml || '<span style="color:var(--text3);font-style:italic">No schedule data</span>'}</div>
+          <div style="margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;font-size:11px">
+            <div style="color:var(--text2)">Length <span style="color:var(--text3);font-style:italic">N/A</span></div>
+            <div style="color:var(--text2)">Lanes <span style="color:var(--text3);font-style:italic">N/A</span></div>
+            <div style="color:var(--text2)">Speed limit <span style="color:var(--text3);font-style:italic">N/A</span></div>
+            <div style="color:var(--text2)">Bike lane <span style="color:var(--text3);font-style:italic">N/A</span></div>
+            <div style="color:var(--text2)">Traffic calming <span style="color:var(--text3);font-style:italic">N/A</span></div>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+  } else {
+    html += `<div class="pending-note">This is a control school — not part of the Open Streets Schools program.</div>`;
+  }
+
+  // Outdoor space
+  html += `<div>
+    <div class="sb-section-title">Outdoor space</div>
+    <div class="oss-row"><span class="oss-key">Playground</span>
+      <span class="oss-val" style="color:${s.pg ? 'var(--ctrl)' : 'var(--text3)'}">
+        ${s.pg ? 'Yes ✓' : 'No'}
+      </span>
+    </div>
+    <div class="oss-row"><span class="oss-key">Polygon</span>
+      <span class="oss-val" style="font-style:italic;color:var(--text3)">Manual draw pending</span>
+    </div>
+  </div>`;
+
+  document.getElementById('oss-program-info').innerHTML = html;
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+let currentTab = 0;
+function setTab(i) {
+  document.querySelectorAll('.sb-tab').forEach((t,j) => t.classList.toggle('active', i===j));
+  // Map panel index to element id (tab-dem, tab-nbhd, tab-oss, tab-sum)
+  const panelIds = ['tab-dem','tab-nbhd','tab-oss','tab-sum'];
+  panelIds.forEach((id, j) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', i===j);
+  });
+  currentTab = i;
+}
+
+// ── Buffer tab ─────────────────────────────────────────────────────────────
+function setBuf(el, size) {
+  document.querySelectorAll('.buf-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if (selectedSchool) {
+    const partner = DASHBOARD_DATA.schools.find(x => x.g === selectedSchool.g && x.en !== selectedSchool.en);
+    populateNeighborhood(selectedSchool, partner, size);
+  }
+}
+
+// ── Jump to match ──────────────────────────────────────────────────────────
+function jumpToMatch() {
+  const ml = document.getElementById('sb-match-link');
+  if (ml._partner) selectSchool(ml._partner);
+}
+
+// ── Clear selection ────────────────────────────────────────────────────────
+function _clearSelection(silent) {
+  selectedSchool = null; activeBufSchool = null;
+  if (matchLine) { map.removeLayer(matchLine); matchLine = null; }
+  bufCircles.forEach(c => map.removeLayer(c)); bufCircles = [];
+  refreshPlaygrounds();
+  allMatchLines.forEach(({ line }) => {
+    line.setStyle({ color: '#B0A8E8', weight: 1.5, opacity: 0.45, dashArray: '4 5' });
+  });
+
+  DASHBOARD_DATA.schools.forEach(s => {
+    const m = markerMap[s.en]; if (!m) return;
+    const show = layers[s.t] && activeQ.has(s.q);
+    if (show) {
+      m.setIcon(makeIcon(s.t==='case' ? COLORS.case : COLORS.ctrl, 28, false, s.t));
+      m.addTo(map);
+    } else { map.removeLayer(m); }
+  });
+
+  if (!silent) {
+    document.getElementById('sb-empty').style.display = 'flex';
+    document.getElementById('sb-content').classList.remove('show');
+    setTab(0);
+  }
+}
+window.clearSelection = () => _clearSelection(false);
+
+// ── Initial visibility ─────────────────────────────────────────────────────
+console.log('Dashboard init: schools='+DASHBOARD_DATA.schools.length+' segs='+DASHBOARD_DATA.segments.length+' excl='+DASHBOARD_DATA.excluded.length);
+console.log('Map container size:', document.getElementById('map').offsetWidth+'x'+document.getElementById('map').offsetHeight);
+refreshMarkerVisibility();
+refreshPlaygrounds();
+
+// ── Segment category sub-toggle ────────────────────────────────────────────
+function toggleSegCat(cat, el) {
+  if (segCats.has(cat)) { segCats.delete(cat); el.classList.add('off'); }
+  else { segCats.add(cat); el.classList.remove('off'); }
+  refreshMarkerVisibility();
+}
+
+// ── Playground layer (placeholder — will use GeoJSON when polygons ready) ──
+function refreshPlaygrounds() {
+  playgroundMarkers.forEach(m => map.removeLayer(m));
+  playgroundMarkers = [];
+  if (!layers.playground) return;
+  // Show a subtle ring around schools that have a playground
+  DASHBOARD_DATA.schools.forEach(s => {
+    if (!s.pg) return;
+    const show = (s.t === 'case' && layers.case) || (s.t === 'ctrl' && layers.ctrl);
+    if (!show) return;
+    const c = L.circle([s.lat, s.lon], {
+      radius: 40, color: '#C8A020', weight: 2,
+      fillColor: '#F8E060', fillOpacity: 0.25,
+      dashArray: '3 3', interactive: false
+    }).addTo(map);
+    playgroundMarkers.push(c);
+  });
+}
+
+// ── Stats panel ───────────────────────────────────────────────────────────
+// Matching Summary is now tab 3 in the sidebar
+
+</script>
+</body>
+</html>
