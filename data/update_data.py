@@ -32,7 +32,7 @@ MATCHED_CSV  = HERE / "oss_matched_v1_20260420.csv"        # update filename whe
 SEGMENTS_CSV = HERE / "oss_segments_final.csv"
 TIMING_CSV   = HERE / "oss_timing_clean.csv"
 SEGMENTS_TREATED_CSV = HERE / "oss_segments_treated.csv"   # has WGS84 coords
-OUTPUT_JS    = HERE / "dashboard_data.js"
+OUTPUT_JS    = HERE.parent / "dashboard_data.js"  # root of repo, next to index.html
 # ─────────────────────────────────────────────────────────────────────────────
 
 

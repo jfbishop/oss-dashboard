@@ -569,7 +569,7 @@
 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="data/dashboard_data.js"></script>
+<script src="dashboard_data.js"></script>
 <script>
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -594,6 +594,7 @@ let matchLine = null;
 let markerMap = {}; // entity_name -> leaflet marker
 let segLayerMap = {}; // seg.id -> leaflet polyline
 let playgroundMarkers = [];
+let currentTab = 0;
 
 // ── Map init ───────────────────────────────────────────────────────────────
 const NYC_BOUNDS = L.latLngBounds(
@@ -1072,7 +1073,6 @@ function populateOSS(s) {
 }
 
 // ── Tab switching ──────────────────────────────────────────────────────────
-let currentTab = 0;
 function setTab(i) {
   document.querySelectorAll('.sb-tab').forEach((t,j) => t.classList.toggle('active', i===j));
   // Map panel index to element id (tab-dem, tab-nbhd, tab-oss, tab-sum)

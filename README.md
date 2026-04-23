@@ -2,7 +2,7 @@
 
 An interactive map dashboard presenting findings from a spatial equity analysis of schools in the NYC Open Streets for Schools program.
 
-**Live dashboard:** _add Vercel URL here once deployed_
+**Live dashboard:** https://oss-dashboard-psi.vercel.app/
 
 ---
 
@@ -20,7 +20,7 @@ The Open Streets for Schools (OSS) program closes street segments adjacent to pa
 oss-dashboard/
 ├── index.html                  # Main dashboard (Leaflet.js)
 ├── data/
-│   ├── dashboard_data.js       # All map data (schools, segments, schedules)
+├── dashboard_data.js           # All map data (schools, segments, schedules)
 │   ├── oss_timing_clean.csv    # Source timing data for reference
 │   └── update_data.py          # Script to regenerate dashboard_data.js
 ├── docs/
@@ -39,7 +39,7 @@ Open `index.html` directly in Chrome or Firefox — no server needed.
 
 ## How to update the data
 
-All map data lives in `data/dashboard_data.js`. When source data changes, regenerate it by running:
+All map data lives in `dashboard_data.js` (repo root, next to `index.html`). When source data changes, regenerate it by running:
 
 ```bash
 cd data
@@ -101,9 +101,18 @@ The following appear as "N/A" or "Pending" in the dashboard and will be populate
 
 ## Authors
 
-_Add names and affiliations_
-
+**Kathryn (Katie) G. Burford**, PhD 
+Post Doctoral Scholar 
+[Built Environment and Health Research Group](https://beh.columbia.edu/) 
 Columbia University Mailman School of Public Health
+
+**Anna Carl**
+MS Candidate, Urban Planning
+Columbia University Graduate School of Architecture, Planning and Preservation
+
+**Juliet Bishop**
+MA Candidate, Quantitative Methods in the Social Sciences  
+Columbia University Graduate School of Arts and Sciences
 
 ---
 
