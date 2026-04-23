@@ -101,18 +101,22 @@ The following appear as "N/A" or "Pending" in the dashboard and will be populate
 
 ## Authors
 
-**Kathryn (Katie) G. Burford**, PhD 
-Post Doctoral Scholar 
-[Built Environment and Health Research Group](https://beh.columbia.edu/) 
-Columbia University Mailman School of Public Health
+**Kathryn (Katie) G. Burford**, PhD
 
-**Anna Carl**
-MS Candidate, Urban Planning
-Columbia University Graduate School of Architecture, Planning and Preservation
+Postdoctoral Research Scientist
+[Built Environment and Health Research Group](https://beh.columbia.edu/) 
+
+Columbia University Mailman School of Public Health
 
 **Juliet Bishop**
 MA Candidate, Quantitative Methods in the Social Sciences  
+
 Columbia University Graduate School of Arts and Sciences
+
+**Anna Carl**
+MS Candidate, Urban Planning
+
+Columbia University Graduate School of Architecture, Planning and Preservation
 
 ---
 
