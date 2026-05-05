@@ -28,10 +28,10 @@ from pathlib import Path
 
 # ── Edit these paths to point to your source files ───────────────────────────
 HERE = Path(__file__).parent
-MATCHED_CSV  = HERE / "oss_matched_v1_20260420.csv"        # update filename when refreshed
-SEGMENTS_CSV = HERE / "oss_segments_final.csv"
-TIMING_CSV   = HERE / "oss_timing_clean.csv"
-SEGMENTS_TREATED_CSV = HERE / "oss_segments_treated.csv"   # has WGS84 coords
+MATCHED_CSV  = HERE / "raw" / "oss_v4_20260430.csv"        # update filename when refreshed
+SEGMENTS_CSV = HERE / "raw" / "oss_segments_final.csv"
+TIMING_CSV   = HERE / "raw" / "oss_timing_clean.csv"
+SEGMENTS_TREATED_CSV = HERE / "raw" / "oss_segments_treated.csv"   # has WGS84 coords
 OUTPUT_JS    = HERE.parent / "dashboard_data.js"  # root of repo, next to index.html
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -224,7 +224,7 @@ def main():
     print()
     print("To add years-in-program data:")
     print("  Edit dashboard_data.js and change 'yrs':null to 'yrs':N for each school,")
-    print("  OR add a 'years_in_program.csv' column to your matched CSV and re-run this script.")
+    print("  OR add a 'years_in_program' column to your matched CSV and re-run this script.")
 
 
 if __name__ == '__main__':
