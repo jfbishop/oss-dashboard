@@ -386,19 +386,19 @@ html, body {
       <div class="layer-row" id="lr-oss" onclick="toggleLayerRow('oss',this)">
         <div class="lr-icon"><svg width="13" height="18" viewBox="0 0 100 100"><path d="M50,0C30,0,14,16,14,36C14,65,50,100,50,100s36-35,36-64C86,16,70,0,50,0z M50,63c-15,0-26-12-26-26C24,22,35,10,50,10c15,0,26,12,26,26C76,51,65,63,50,63z" fill="#CC5244"/></svg></div>
         <span class="lr-label">All OSS schools</span>
-        <span class="lr-count">n=70</span>
+        <span class="lr-count" id="count-oss"></span>
         <div class="lr-toggle"></div>
       </div>
       <div class="layer-row" id="lr-case" onclick="toggleLayerRow('case',this)">
         <div class="lr-icon"><svg width="13" height="18" viewBox="0 0 100 100"><path d="M50,0C30,0,14,16,14,36C14,65,50,100,50,100s36-35,36-64C86,16,70,0,50,0z M50,63c-15,0-26-12-26-26C24,22,35,10,50,10c15,0,26,12,26,26C76,51,65,63,50,63z" fill="#CC5244" opacity="0.6"/></svg></div>
         <span class="lr-label" style="padding-left:6px">Case schools</span>
-        <span class="lr-count">n=58</span>
+        <span class="lr-count" id="count-case"></span>
         <div class="lr-toggle"></div>
       </div>
       <div class="layer-row" id="lr-ctrl" onclick="toggleLayerRow('ctrl',this)">
         <div class="lr-icon"><svg width="13" height="18" viewBox="0 0 100 100"><path d="M50,0C30,0,14,16,14,36C14,65,50,100,50,100s36-35,36-64C86,16,70,0,50,0z M50,63c-15,0-26-12-26-26C24,22,35,10,50,10c15,0,26,12,26,26C76,51,65,63,50,63z" fill="#4A6FCC"/></svg></div>
         <span class="lr-label">Control schools</span>
-        <span class="lr-count">n=58</span>
+        <span class="lr-count" id="count-ctrl"></span>
         <div class="lr-toggle"></div>
       </div>
     </div>
@@ -409,7 +409,7 @@ html, body {
       <div class="layer-row" id="lr-segs" onclick="toggleLayerRow('segs',this)">
         <div class="lr-icon"><div style="width:18px;height:4px;background:#4EC994;border-radius:2px"></div></div>
         <span class="lr-label">OSS segments</span>
-        <span class="lr-count">n=78</span>
+        <span class="lr-count" id="count-segs"></span>
         <div class="lr-toggle"></div>
       </div>
       <div class="layer-row off" id="lr-buf" onclick="toggleLayerRow('buf',this)">
@@ -536,8 +536,9 @@ html, body {
 
       <!-- Tab 1: Neighborhood -->
       <div class="sb-panel" id="tab-nbhd">
-        <div>
-          <div class="sb-section-title">Buffer distance</div>
+        <!-- Buffer section (case/ctrl only) -->
+        <div id="nbhd-buffer-section">
+          <div class="sb-section-title">Buffer distance <span style="font-size:9px;color:var(--text-light4)">(case &amp; control only)</span></div>
           <div class="buf-tabs">
             <button class="buf-tab active" onclick="setBuf(this,'250')">250 m</button>
             <button class="buf-tab" onclick="setBuf(this,'500')">500 m</button>
@@ -551,8 +552,32 @@ html, body {
             </tr></thead>
             <tbody id="nbhd-body"></tbody>
           </table>
+          <div class="pending-note" style="margin-top:8px">Buffer characteristics pending ACS data integration.</div>
         </div>
-        <div class="pending-note">Neighborhood characteristics pending ACS + health data integration.</div>
+
+        <!-- Census tract section -->
+        <div id="nbhd-tract-section" style="margin-top:14px">
+          <div class="sb-section-title">Census tract context</div>
+          <table class="nbhd-table">
+            <thead><tr>
+              <th style="width:58%">Indicator</th>
+              <th class="nbhd-case" style="width:42%">Value</th>
+            </tr></thead>
+            <tbody id="tract-body"></tbody>
+          </table>
+        </div>
+
+        <!-- Community health section -->
+        <div id="nbhd-health-section" style="margin-top:14px">
+          <div class="sb-section-title">Community district health</div>
+          <table class="nbhd-table">
+            <thead><tr>
+              <th style="width:58%">Indicator</th>
+              <th class="nbhd-case" style="width:42%">Value</th>
+            </tr></thead>
+            <tbody id="health-body"></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Tab 2: OSS Info -->
@@ -566,33 +591,29 @@ html, body {
       <div class="sb-panel" id="tab-sum">
         <div>
           <div class="sb-section-title">School type · <span style="color:var(--case)">case</span> / <span style="color:var(--ctrl)">control</span></div>
-          <div class="stats-row"><span class="stats-label">Public (DOE)</span><div class="stats-bar-track"><div class="stats-bar" style="width:89%;background:var(--case)"></div></div><span class="stats-n case">51</span><div class="stats-bar-track"><div class="stats-bar" style="width:84%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">48</span></div>
-          <div class="stats-row"><span class="stats-label">Charter</span><div class="stats-bar-track"><div class="stats-bar" style="width:11%;background:var(--case)"></div></div><span class="stats-n case">6</span><div class="stats-bar-track"><div class="stats-bar" style="width:16%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">9</span></div>
-          <div class="stats-row"><span class="stats-label">Non-public</span><div class="stats-bar-track"></div><span class="stats-n" style="color:var(--text-light4)">—</span><div class="stats-bar-track"></div><span class="stats-n" style="color:var(--excl)">12*</span></div>
+          <div class="stats-row"><span class="stats-label">Public (DOE)</span><div class="stats-bar-track"><div class="stats-bar" id="sum-bar-doe-case" style="background:var(--case)"></div></div><span class="stats-n case" id="sum-n-doe-case"></span><div class="stats-bar-track"><div class="stats-bar" id="sum-bar-doe-ctrl" style="background:var(--ctrl)"></div></div><span class="stats-n ctrl" id="sum-n-doe-ctrl"></span></div>
+          <div class="stats-row"><span class="stats-label">Charter</span><div class="stats-bar-track"><div class="stats-bar" id="sum-bar-cha-case" style="background:var(--case)"></div></div><span class="stats-n case" id="sum-n-cha-case"></span><div class="stats-bar-track"><div class="stats-bar" id="sum-bar-cha-ctrl" style="background:var(--ctrl)"></div></div><span class="stats-n ctrl" id="sum-n-cha-ctrl"></span></div>
+          <div class="stats-row"><span class="stats-label">Non-public</span><div class="stats-bar-track"></div><span class="stats-n" style="color:var(--text-light4)">—</span><div class="stats-bar-track"></div><span class="stats-n" style="color:var(--excl)" id="sum-n-excl"></span></div>
           <div style="font-size:10px;color:var(--text-light4);margin-top:2px;font-style:italic;font-family:'DM Sans',sans-serif">*excluded from analysis</div>
         </div>
         <div>
           <div class="sb-section-title">Grade level · <span style="color:var(--case)">case</span> / <span style="color:var(--ctrl)">control</span></div>
-          <div class="stats-row"><span class="stats-label">Elementary</span><div class="stats-bar-track"><div class="stats-bar" style="width:54%;background:var(--case)"></div></div><span class="stats-n case">31</span><div class="stats-bar-track"><div class="stats-bar" style="width:54%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">31</span></div>
-          <div class="stats-row"><span class="stats-label">Jr High / MS</span><div class="stats-bar-track"><div class="stats-bar" style="width:14%;background:var(--case)"></div></div><span class="stats-n case">8</span><div class="stats-bar-track"><div class="stats-bar" style="width:14%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">8</span></div>
-          <div class="stats-row"><span class="stats-label">K–8</span><div class="stats-bar-track"><div class="stats-bar" style="width:12%;background:var(--case)"></div></div><span class="stats-n case">7</span><div class="stats-bar-track"><div class="stats-bar" style="width:12%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">7</span></div>
-          <div class="stats-row"><span class="stats-label">High school</span><div class="stats-bar-track"><div class="stats-bar" style="width:12%;background:var(--case)"></div></div><span class="stats-n case">7</span><div class="stats-bar-track"><div class="stats-bar" style="width:12%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">7</span></div>
-          <div class="stats-row"><span class="stats-label">K–12</span><div class="stats-bar-track"><div class="stats-bar" style="width:5%;background:var(--case)"></div></div><span class="stats-n case">3</span><div class="stats-bar-track"><div class="stats-bar" style="width:5%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">3</span></div>
-          <div class="stats-row"><span class="stats-label">Secondary</span><div class="stats-bar-track"><div class="stats-bar" style="width:2%;background:var(--case)"></div></div><span class="stats-n case">1</span><div class="stats-bar-track"><div class="stats-bar" style="width:2%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">1</span></div>
-          <div style="font-size:10px;color:var(--text-light4);margin-top:2px;font-style:italic;font-family:'DM Sans',sans-serif">Matched by grade level (57 pairs)</div>
+          <div id="sum-grade-rows"></div>
+          <div style="font-size:10px;color:var(--text-light4);margin-top:2px;font-style:italic;font-family:'DM Sans',sans-serif" id="sum-grade-note"></div>
         </div>
         <div>
           <div class="sb-section-title">% Hispanic quartile · <span style="color:var(--case)">case</span> / <span style="color:var(--ctrl)">control</span></div>
-          <div class="stats-row"><span class="stats-label">Q1 (≤29%)</span><div class="stats-bar-track"><div class="stats-bar" style="width:18%;background:var(--case)"></div></div><span class="stats-n case">10</span><div class="stats-bar-track"><div class="stats-bar" style="width:18%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">10</span></div>
-          <div class="stats-row"><span class="stats-label">Q2 (30–52%)</span><div class="stats-bar-track"><div class="stats-bar" style="width:26%;background:var(--case)"></div></div><span class="stats-n case">15</span><div class="stats-bar-track"><div class="stats-bar" style="width:26%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">15</span></div>
-          <div class="stats-row"><span class="stats-label">Q3 (53–75%)</span><div class="stats-bar-track"><div class="stats-bar" style="width:16%;background:var(--case)"></div></div><span class="stats-n case">9</span><div class="stats-bar-track"><div class="stats-bar" style="width:16%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">9</span></div>
-          <div class="stats-row"><span class="stats-label">Q4 (>75%)</span><div class="stats-bar-track"><div class="stats-bar" style="width:40%;background:var(--case)"></div></div><span class="stats-n case">23</span><div class="stats-bar-track"><div class="stats-bar" style="width:40%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">23</span></div>
-          <div style="font-size:10px;color:var(--text-light4);margin-top:2px;font-style:italic;font-family:'DM Sans',sans-serif">Matched by quartile (57 pairs)</div>
+          <div id="sum-quartile-rows"></div>
+          <div style="font-size:10px;color:var(--text-light4);margin-top:2px;font-style:italic;font-family:'DM Sans',sans-serif" id="sum-quartile-note"></div>
+        </div>
+        <div>
+          <div class="sb-section-title">Borough · <span style="color:var(--case)">case</span> / <span style="color:var(--ctrl)">control</span></div>
+          <div id="sum-borough-rows"></div>
         </div>
         <div>
           <div class="sb-section-title">Outdoor space</div>
-          <div class="stats-row"><span class="stats-label">Has playground</span><div class="stats-bar-track"><div class="stats-bar" style="width:74%;background:var(--case)"></div></div><span class="stats-n case">42</span><div class="stats-bar-track"><div class="stats-bar" style="width:74%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">42</span></div>
-          <div class="stats-row"><span class="stats-label">No playground</span><div class="stats-bar-track"><div class="stats-bar" style="width:26%;background:var(--case)"></div></div><span class="stats-n case">15</span><div class="stats-bar-track"><div class="stats-bar" style="width:26%;background:var(--ctrl)"></div></div><span class="stats-n ctrl">15</span></div>
+          <div class="stats-row"><span class="stats-label">Has playground</span><div class="stats-bar-track"><div class="stats-bar" id="sum-bar-pg-case" style="background:var(--case)"></div></div><span class="stats-n case" id="sum-n-pg-case"></span><div class="stats-bar-track"><div class="stats-bar" id="sum-bar-pg-ctrl" style="background:var(--ctrl)"></div></div><span class="stats-n ctrl" id="sum-n-pg-ctrl"></span></div>
+          <div class="stats-row"><span class="stats-label">No playground</span><div class="stats-bar-track"><div class="stats-bar" id="sum-bar-npg-case" style="background:var(--case)"></div></div><span class="stats-n case" id="sum-n-npg-case"></span><div class="stats-bar-track"><div class="stats-bar" id="sum-bar-npg-ctrl" style="background:var(--ctrl)"></div></div><span class="stats-n ctrl" id="sum-n-npg-ctrl"></span></div>
         </div>
       </div>
     </div><!-- /sb-content -->
@@ -721,6 +742,7 @@ DASHBOARD_DATA.excluded.forEach(s => {
     `<strong>${s.n}</strong><div class="tip-sub"><span style="color:${COLORS.excl}">Excluded</span> · Non-public</div><div class="tip-sub">${s.addr}</div>`));
   m.on('mousemove', e => moveTip(e.originalEvent));
   m.on('mouseout', hideTip);
+  m.on('click', () => selectExcluded(s));
 });
 
 // ── Segment polylines ──────────────────────────────────────────────────────
@@ -962,20 +984,39 @@ function selectSchool(s) {
   catch(e) { console.error('populateSidebar error:', e); }
 }
 
-// ── Sidebar population ─────────────────────────────────────────────────────
+// ── Select excluded school ─────────────────────────────────────────────────
+function selectExcluded(s) {
+  _clearSelection(true);
+  selectedSchool = s;
+  const m = markerMap['excl_'+s.n];
+  if (m) m.setIcon(makeIcon(COLORS.excl, 26, true));
+  map.setView([s.lat, s.lon], 15);
+  document.getElementById('sb-empty').style.display = 'none';
+  document.getElementById('sb-content').classList.add('show');
+  try { populateSidebar(s, null); }
+  catch(e) { console.error('populateSidebar error:', e); }
+}
+
+
 function populateSidebar(s, partner) {
   const badge = document.getElementById('sb-school-badge');
   if (s.t === 'case') {
     badge.style.cssText = `background:rgba(204,82,68,0.2);color:#E8907F;border:1.5px solid rgba(204,82,68,0.4)`;
     badge.innerHTML = '🔴 OSS Case School';
-  } else {
+  } else if (s.t === 'ctrl') {
     badge.style.cssText = `background:rgba(74,111,204,0.2);color:#90AEDC;border:1.5px solid rgba(74,111,204,0.4)`;
     badge.innerHTML = '🔵 Control School';
+  } else {
+    badge.style.cssText = `background:rgba(90,90,84,0.2);color:#A0A09A;border:1.5px solid rgba(90,90,84,0.4)`;
+    badge.innerHTML = '⚫ Excluded (Non-public)';
   }
+
   document.getElementById('sb-school-name').textContent = s.n;
-  document.getElementById('sb-school-meta').innerHTML =
-    `${s.org} · ${s.gc} · ${s.enroll} enrolled · ${s.boro}` +
-    (s.pg ? ' · <span style="color:#4EC994">Playground ✓</span>' : '');
+  const metaLine = s.t === 'excl'
+    ? `Non-public · ${s.addr || ''}`
+    : `${s.org} · ${s.gc} · ${s.enroll} enrolled · ${s.boro}` +
+      (s.pg ? ' · <span style="color:#4EC994">Playground ✓</span>' : '');
+  document.getElementById('sb-school-meta').innerHTML = metaLine;
 
   const ml = document.getElementById('sb-match-link');
   if (partner) {
@@ -984,13 +1025,24 @@ function populateSidebar(s, partner) {
     ml._partner = partner;
   } else ml.style.display = 'none';
 
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.n+', '+s.addr+', '+s.boro+', NY')}`;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.n+', '+(s.addr||'')+', '+(s.boro||'')+(s.boro?', NY':'NY'))}`;
   const svUrl   = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${s.lat},${s.lon}&fov=90`;
   document.getElementById('sb-school-links').innerHTML =
     `<a href="${mapsUrl}" target="_blank" class="school-link">📍 Google Maps</a>
      <a href="${svUrl}"   target="_blank" class="school-link">🏫 Street View</a>`;
 
-  populateDemographics(s, partner);
+  // Show/hide demographics tab for excluded schools (no demographic data)
+  const demTab = document.querySelector('.sb-tab:nth-child(1)');
+  if (demTab) demTab.style.opacity = s.t === 'excl' ? '0.35' : '1';
+
+  // Show/hide buffer section (only for case/ctrl)
+  const bufSection = document.getElementById('nbhd-buffer-section');
+  if (bufSection) bufSection.style.display = s.t === 'excl' ? 'none' : 'block';
+
+  if (s.t !== 'excl') populateDemographics(s, partner);
+  else document.getElementById('tab-dem').innerHTML =
+    `<div class="pending-note">Demographic data not available for excluded non-public schools.</div>`;
+
   populateNeighborhood(s, partner, '250');
   populateOSS(s);
 }
@@ -1057,11 +1109,43 @@ function populateDemographics(s, partner) {
 }
 
 function populateNeighborhood(s, partner, bufSize) {
-  const rows = [['% poverty',null,null],['% fem.-headed HH',null,null],['Median HH income',null,null],['Child health index',null,null]];
-  document.getElementById('nbhd-body').innerHTML = rows.map(([label,cv,xv]) =>
+  // Buffer section (case/ctrl only)
+  if (s.t !== 'excl') {
+    const rows = [
+      ['% poverty', null, null],
+      ['% fem.-headed HH', null, null],
+      ['Median HH income', null, null],
+      ['Child health index', null, null]
+    ];
+    document.getElementById('nbhd-body').innerHTML = rows.map(([label,cv,xv]) =>
+      `<tr><td class="nbhd-label">${label}</td>
+       <td class="${cv!==null?'nbhd-case':'nbhd-na'}">${cv!==null?cv:'N/A'}</td>
+       <td class="${xv!==null?'nbhd-ctrl':'nbhd-na'}">${xv!==null?xv:'N/A'}</td></tr>`
+    ).join('');
+  }
+
+  // Census tract section — placeholders, populated when tract data arrives
+  const tractRows = [
+    ['% poverty', null],
+    ['Median HH income', null],
+    ['% Hispanic', null],
+    ['Population density', null],
+  ];
+  const tractBody = document.getElementById('tract-body');
+  if (tractBody) tractBody.innerHTML = tractRows.map(([label, val]) =>
     `<tr><td class="nbhd-label">${label}</td>
-     <td class="${cv!==null?'nbhd-case':'nbhd-na'}">${cv!==null?cv:'N/A'}</td>
-     <td class="${xv!==null?'nbhd-ctrl':'nbhd-na'}">${xv!==null?xv:'N/A'}</td></tr>`
+     <td class="${val!==null?'nbhd-case':'nbhd-na'}">${val!==null?val:'N/A'}</td></tr>`
+  ).join('');
+
+  // Community district health section — placeholders
+  const healthRows = [
+    ['Child obesity %', null],
+    ['Child asthma rate', null],
+  ];
+  const healthBody = document.getElementById('health-body');
+  if (healthBody) healthBody.innerHTML = healthRows.map(([label, val]) =>
+    `<tr><td class="nbhd-label">${label}</td>
+     <td class="${val!==null?'nbhd-case':'nbhd-na'}">${val!==null?val:'N/A'}</td></tr>`
   ).join('');
 }
 
@@ -1117,6 +1201,7 @@ function setTab(i) {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('active', i===j);
   });
+  if (i === 3) populateSummary();
   currentTab = i;
 }
 function setBuf(el, size) {
@@ -1155,8 +1240,109 @@ function _clearSelection(silent) {
 }
 window.clearSelection = () => _clearSelection(false);
 
+// ── Summary tab population (dynamic from data) ────────────────────────────
+function populateSummary() {
+  const schools = DASHBOARD_DATA.schools;
+  const caseS = schools.filter(s => s.t === 'case');
+  const ctrlS = schools.filter(s => s.t === 'ctrl');
+  const nCase = caseS.length;
+  const nCtrl = ctrlS.length;
+  const nPairs = Math.min(nCase, nCtrl);
+  const nExcl  = DASHBOARD_DATA.excluded.length;
+
+  function count(arr, fn) { return arr.filter(fn).length; }
+  function setBar(id, pct) { const el = document.getElementById(id); if(el) el.style.width = pct+'%'; }
+  function setN(id, n)     { const el = document.getElementById(id); if(el) el.textContent = n; }
+
+  // School type
+  const caseDOE = count(caseS, s => s.org === 'DOE');
+  const ctrlDOE = count(ctrlS, s => s.org === 'DOE');
+  const caseChr = count(caseS, s => s.org === 'Charter');
+  const ctrlChr = count(ctrlS, s => s.org === 'Charter');
+  setBar('sum-bar-doe-case', Math.round(caseDOE/nCase*100));
+  setBar('sum-bar-doe-ctrl', Math.round(ctrlDOE/nCtrl*100));
+  setN('sum-n-doe-case', caseDOE); setN('sum-n-doe-ctrl', ctrlDOE);
+  setBar('sum-bar-cha-case', Math.round(caseChr/nCase*100));
+  setBar('sum-bar-cha-ctrl', Math.round(ctrlChr/nCtrl*100));
+  setN('sum-n-cha-case', caseChr); setN('sum-n-cha-ctrl', ctrlChr);
+  setN('sum-n-excl', nExcl+'*');
+
+  // Grade level
+  const grades = [...new Set(schools.map(s => s.gc))].filter(Boolean).sort();
+  const gradeEl = document.getElementById('sum-grade-rows');
+  if (gradeEl) gradeEl.innerHTML = grades.map(g => {
+    const nc = count(caseS, s => s.gc === g);
+    const nx = count(ctrlS, s => s.gc === g);
+    const wc = Math.round(nc/nCase*100), wx = Math.round(nx/nCtrl*100);
+    return `<div class="stats-row"><span class="stats-label">${g.replace('Junior High-Intermediate-Middle','Jr High/MS').replace('Elementary','Elementary').replace('High School','High school').replace('K-12 all grades','K–12').replace('Secondary School','Secondary')}</span>
+      <div class="stats-bar-track"><div class="stats-bar" style="width:${wc}%;background:var(--case)"></div></div>
+      <span class="stats-n case">${nc}</span>
+      <div class="stats-bar-track"><div class="stats-bar" style="width:${wx}%;background:var(--ctrl)"></div></div>
+      <span class="stats-n ctrl">${nx}</span></div>`;
+  }).join('');
+  const gnEl = document.getElementById('sum-grade-note');
+  if (gnEl) gnEl.textContent = `Matched by grade level (${nPairs} pairs)`;
+
+  // Quartile
+  const qKeys = ['Q1','Q2','Q3','Q4'];
+  const qLabels = { Q1:'Q1 (≤29%)', Q2:'Q2 (30–52%)', Q3:'Q3 (53–75%)', Q4:'Q4 (>75%)' };
+  const qEl = document.getElementById('sum-quartile-rows');
+  if (qEl) qEl.innerHTML = qKeys.map(q => {
+    const nc = count(caseS, s => s.q === q);
+    const nx = count(ctrlS, s => s.q === q);
+    const wc = Math.round(nc/nCase*100), wx = Math.round(nx/nCtrl*100);
+    return `<div class="stats-row"><span class="stats-label">${qLabels[q]}</span>
+      <div class="stats-bar-track"><div class="stats-bar" style="width:${wc}%;background:var(--case)"></div></div>
+      <span class="stats-n case">${nc}</span>
+      <div class="stats-bar-track"><div class="stats-bar" style="width:${wx}%;background:var(--ctrl)"></div></div>
+      <span class="stats-n ctrl">${nx}</span></div>`;
+  }).join('');
+  const qnEl = document.getElementById('sum-quartile-note');
+  if (qnEl) qnEl.textContent = `Matched by quartile (${nPairs} pairs)`;
+
+  // Borough
+  const boroughs = [...new Set(schools.map(s => s.boro))].filter(Boolean).sort();
+  const bEl = document.getElementById('sum-borough-rows');
+  if (bEl) bEl.innerHTML = boroughs.map(b => {
+    const nc = count(caseS, s => s.boro === b);
+    const nx = count(ctrlS, s => s.boro === b);
+    const wc = Math.round(nc/nCase*100), wx = Math.round(nx/nCtrl*100);
+    return `<div class="stats-row"><span class="stats-label">${b}</span>
+      <div class="stats-bar-track"><div class="stats-bar" style="width:${wc}%;background:var(--case)"></div></div>
+      <span class="stats-n case">${nc}</span>
+      <div class="stats-bar-track"><div class="stats-bar" style="width:${wx}%;background:var(--ctrl)"></div></div>
+      <span class="stats-n ctrl">${nx}</span></div>`;
+  }).join('');
+
+  // Playground
+  const casePG = count(caseS, s => s.pg); const ctrlPG = count(ctrlS, s => s.pg);
+  setBar('sum-bar-pg-case',  Math.round(casePG/nCase*100));
+  setBar('sum-bar-pg-ctrl',  Math.round(ctrlPG/nCtrl*100));
+  setN('sum-n-pg-case', casePG); setN('sum-n-pg-ctrl', ctrlPG);
+  setBar('sum-bar-npg-case', Math.round((nCase-casePG)/nCase*100));
+  setBar('sum-bar-npg-ctrl', Math.round((nCtrl-ctrlPG)/nCtrl*100));
+  setN('sum-n-npg-case', nCase-casePG); setN('sum-n-npg-ctrl', nCtrl-ctrlPG);
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
+// Dynamic counts from data
+const _nCase = DASHBOARD_DATA.schools.filter(s => s.t === 'case').length;
+const _nCtrl = DASHBOARD_DATA.schools.filter(s => s.t === 'ctrl').length;
+const _nExcl = DASHBOARD_DATA.excluded.length;
+const _nSegs = DASHBOARD_DATA.segments.length;
+const _nOSS  = _nCase + _nExcl;
+const el = id => document.getElementById(id);
+if (el('count-oss'))  el('count-oss').textContent  = `n=${_nOSS}`;
+if (el('count-case')) el('count-case').textContent = `n=${_nCase}`;
+if (el('count-ctrl')) el('count-ctrl').textContent = `n=${_nCtrl}`;
+if (el('count-segs')) el('count-segs').textContent = `n=${_nSegs}`;
+// Update visible count footer
+if (el('vc-total')) el('vc-total').textContent = _nCase + _nCtrl;
+if (el('vc-case'))  el('vc-case').textContent  = _nCase + ' case';
+if (el('vc-ctrl'))  el('vc-ctrl').textContent  = _nCtrl + ' control';
+
 console.log('OSS Dashboard init: schools='+DASHBOARD_DATA.schools.length+' segs='+DASHBOARD_DATA.segments.length);
+populateSummary();
 refreshMarkerVisibility();
 refreshPlaygrounds();
 
