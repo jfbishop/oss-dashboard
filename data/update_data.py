@@ -32,6 +32,7 @@ MATCHED_CSV  = HERE / "raw" / "oss_v4_20260430.csv"        # update filename whe
 SEGMENTS_CSV = HERE / "raw" / "oss_segments_final.csv"
 TIMING_CSV   = HERE / "raw" / "oss_timing_clean.csv"
 SEGMENTS_TREATED_CSV = HERE / "raw" / "oss_segments_treated.csv"   # has WGS84 coords
+NBHD_CSV     = HERE / "raw" / "neighborhood_dashboard_data.csv"    # buffer + tract + CD data
 OUTPUT_JS    = HERE.parent / "dashboard_data.js"  # root of repo, next to index.html
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -83,7 +84,70 @@ def ns(v, cast=None):
     return v
 
 
-def build_schools(matched, segments_orig, seg_info):
+def build_neighborhood_lookup(nbhd_df):
+    """
+    Build a lookup dict keyed by oss_id (int) → neighborhood data dict.
+
+    Buffer columns follow the pattern: r{dist}_{metric}
+    Tract columns:  tract_{metric}
+    CD columns:     cd_{metric}
+
+    Buffer distances: 250, 500, 800, 1600
+    """
+    BUFFER_DISTANCES = [250, 500, 800, 1600]
+    BUFFER_METRICS = {
+        'obesity_pct_2018':  {'label': 'Child obesity %',     'fmt': 'pct'},
+        'asthma_r10k_2018':  {'label': 'Child asthma /10k',   'fmt': 'num'},
+        'median_hh_income':  {'label': 'Median HH income',    'fmt': 'dollar'},
+        'per_pov':           {'label': '% poverty',           'fmt': 'pct'},
+    }
+    TRACT_METRICS = {
+        'pct_poverty':    {'label': '% poverty'},
+        'pct_hisp':       {'label': '% Hispanic'},
+        'pct_black':      {'label': '% Black'},
+        'pct_white':      {'label': '% White'},
+        'pct_asian':      {'label': '% Asian'},
+        'median_income':  {'label': 'Median income'},
+    }
+    CD_METRICS = {
+        'air_pollution':     {'label': 'Air pollution'},
+        'child_asthma':      {'label': 'Child asthma'},
+        'child_obesity':     {'label': 'Child obesity %'},
+        'bike_coverage':     {'label': 'Bike coverage %'},
+        'pedestrian_hosp':   {'label': 'Pedestrian hosp.'},
+        'physical_activity': {'label': 'Physical activity %'},
+    }
+
+    lookup = {}
+    for _, row in nbhd_df.iterrows():
+        oss_id = int(row['oss_id'])
+        # Buffer data: dict keyed by distance → dict of metric → value
+        buffers = {}
+        for dist in BUFFER_DISTANCES:
+            buf = {}
+            for metric in BUFFER_METRICS:
+                col = f'r{dist}_{metric}'
+                val = row.get(col, None)
+                buf[metric] = round(float(val), 2) if pd.notna(val) else None
+            buffers[str(dist)] = buf
+        # Tract data
+        tract = {}
+        for metric in TRACT_METRICS:
+            col = f'tract_{metric}'
+            val = row.get(col, None)
+            tract[metric] = round(float(val), 2) if pd.notna(val) else None
+        # CD data
+        cd = {}
+        for metric in CD_METRICS:
+            col = f'cd_{metric}'
+            val = row.get(col, None)
+            cd[metric] = round(float(val), 2) if pd.notna(val) else None
+
+        lookup[oss_id] = {'buffers': buffers, 'tract': tract, 'cd': cd}
+    return lookup
+
+
+def build_schools(matched, segments_orig, seg_info, nbhd_lookup=None):
     schools = []
     for _, r in matched.iterrows():
         en = str(r['entity_name']).strip()
@@ -93,9 +157,12 @@ def build_schools(matched, segments_orig, seg_info):
         nm = ns(r['num_male'],   float) or 0
         nnb = ns(r['num_nonbinary'], float) or 0
         name = str(r['name']).strip() if pd.notna(r['name']) else en
+        oss_id = ns(r.get('oss_id'), int)
+        nbhd = nbhd_lookup.get(oss_id, {}) if (nbhd_lookup and oss_id) else {}
         schools.append({
             't': 'case' if is_case else 'ctrl',
             'g': int(r['match_group']),
+            'oss_id': oss_id,
             'n': name,
             'en': en,
             'org': str(r['org_type']).strip() if pd.notna(r['org_type']) else '',
@@ -121,6 +188,7 @@ def build_schools(matched, segments_orig, seg_info):
             'pec': ns(r['per_ecdis'], float),
             'segs': obj_ids,
             'yrs': None,  # ← update with years-in-program data from city
+            'nbhd': nbhd if nbhd else None,
         })
     return schools
 
@@ -178,6 +246,15 @@ def main():
     segments_treated = pd.read_csv(SEGMENTS_TREATED_CSV, encoding='latin1')
     timing           = pd.read_csv(TIMING_CSV,           encoding='utf-8')
 
+    # Load neighborhood data if file exists
+    nbhd_lookup = {}
+    if NBHD_CSV.exists():
+        nbhd_df = pd.read_csv(NBHD_CSV, encoding='utf-8')
+        nbhd_lookup = build_neighborhood_lookup(nbhd_df)
+        print(f"  Neighborhood data: {len(nbhd_lookup)} schools")
+    else:
+        print(f"  ⚠ Neighborhood CSV not found at {NBHD_CSV} — skipping")
+
     # Build segment info lookup (orig file has school linkage)
     seg_info = {}
     for _, r in segments_orig.iterrows():
@@ -206,9 +283,11 @@ def main():
         })
 
     print("Building data arrays...")
-    schools  = build_schools(matched, segments_orig, seg_info)
+    schools  = build_schools(matched, segments_orig, seg_info, nbhd_lookup)
     excluded = build_excluded(segments_orig)
     segs     = build_segments(segments_treated, seg_info, timing_lkp)
+
+    n_with_nbhd = sum(1 for s in schools if s.get('nbhd'))
 
     data = {'schools': schools, 'excluded': excluded, 'segments': segs}
     js   = 'const DASHBOARD_DATA=' + json.dumps(data, separators=(',', ':')) + ';'
@@ -218,6 +297,7 @@ def main():
 
     print(f"\n✓ Written: {OUTPUT_JS}")
     print(f"  Schools:  {len(schools)} ({sum(1 for s in schools if s['t']=='case')} case, {sum(1 for s in schools if s['t']=='ctrl')} ctrl)")
+    print(f"  Schools with neighborhood data: {n_with_nbhd}")
     print(f"  Excluded: {len(excluded)}")
     print(f"  Segments: {len(segs)}")
     print(f"  File size: {len(js):,} chars")
