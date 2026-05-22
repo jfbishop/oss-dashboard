@@ -354,6 +354,50 @@ html, body {
 #maptip strong { font-family: 'Fredoka', sans-serif; font-size: 14px; font-weight: 600; display: block; margin-bottom: 2px; color: var(--text-light); }
 #maptip .tip-sub { font-size: 11px; color: var(--text-light3); }
 
+
+  /* ── Search bar ── */
+  #search-wrap {
+    position: relative; flex: 1; max-width: 320px; margin: 0 12px;
+  }
+  #search-input {
+    width: 100%; padding: 6px 12px; border-radius: 20px;
+    border: 1.5px solid var(--border-dark-med);
+    background: var(--bg-panel); color: var(--text-light);
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    outline: none; transition: border-color 0.15s;
+  }
+  #search-input::placeholder { color: var(--text-light4); }
+  #search-input:focus { border-color: rgba(255,255,255,0.3); }
+  #search-results {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--bg-dark); border: 1px solid var(--border-dark-med);
+    border-radius: var(--radius); max-height: 320px; overflow-y: auto;
+    z-index: 2000; display: none; box-shadow: var(--shadow-lg);
+  }
+  #search-results.show { display: block; }
+  .sr-item {
+    padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border-dark);
+    transition: background 0.1s;
+  }
+  .sr-item:last-child { border-bottom: none; }
+  .sr-item:hover { background: rgba(255,255,255,0.06); }
+  .sr-name { font-family: 'Fredoka', sans-serif; font-size: 13px; font-weight: 500; color: var(--text-light); }
+  .sr-sub  { font-size: 11px; color: var(--text-light3); margin-top: 1px; }
+  .sr-badge {
+    display: inline-block; padding: 1px 6px; border-radius: 8px;
+    font-size: 10px; font-weight: 600; margin-right: 4px;
+    font-family: 'Fredoka', sans-serif;
+  }
+  .sr-badge-case { background: rgba(204,82,68,0.2);  color: #E8907F; }
+  .sr-badge-ctrl { background: rgba(74,111,204,0.2); color: #90AEDC; }
+  .sr-badge-excl { background: rgba(90,90,84,0.2);   color: #A0A09A; }
+  .sr-badge-seg  { background: rgba(78,201,148,0.15);color: #7EDBB8; }
+  .sr-empty { padding: 10px 12px; font-size: 12px; color: var(--text-light4); font-style: italic; }
+
+  /* ── Neighborhood colored value cells ── */
+  .nbhd-tract-val  { color: #D060A0; font-weight: 500; text-align: right; }
+  .nbhd-health-val { color: #F4A240; font-weight: 500; text-align: right; }
+
 /* Leaflet overrides */
 .leaflet-control-zoom { border: 1px solid var(--border-dark) !important; box-shadow: var(--shadow) !important; border-radius: 8px !important; overflow: hidden; }
 .leaflet-control-zoom a { background: var(--bg-dark) !important; color: var(--text-light2) !important; font-size: 16px !important; line-height: 28px !important; border-color: var(--border-dark) !important; }
@@ -366,6 +410,13 @@ html, body {
 <!-- Top bar -->
 <div id="topbar">
   <div id="topbar-title">NYC Open Streets for Schools (OSS) <em>· Spatial Equity Dashboard</em></div>
+  <div id="search-wrap">
+    <input id="search-input" type="text" placeholder="Search schools or streets…"
+      oninput="handleSearch(this.value)"
+      onkeydown="if(event.key==='Escape'){this.value='';handleSearch('');this.blur()}"
+      autocomplete="off"/>
+    <div id="search-results"></div>
+  </div>
   <div id="topbar-right">
     <button id="clear-btn" onclick="clearSelection()">Clear selection</button>
   </div>
@@ -558,11 +609,11 @@ html, body {
 
         <!-- Census tract section -->
         <div id="nbhd-tract-section" style="margin-top:14px">
-          <div class="sb-section-title">Census tract context</div>
+          <div class="sb-section-title" style="color:#D060A0">Census tract context</div>
           <table class="nbhd-table">
             <thead><tr>
               <th style="width:58%">Indicator</th>
-              <th class="nbhd-case" style="width:42%">Value</th>
+              <th class="nbhd-tract-val" style="width:42%">Value</th>
             </tr></thead>
             <tbody id="tract-body"></tbody>
           </table>
@@ -570,11 +621,11 @@ html, body {
 
         <!-- Community health section -->
         <div id="nbhd-health-section" style="margin-top:14px">
-          <div class="sb-section-title">Community district health</div>
+          <div class="sb-section-title" style="color:#F4A240">Community district health</div>
           <table class="nbhd-table">
             <thead><tr>
               <th style="width:58%">Indicator</th>
-              <th class="nbhd-case" style="width:42%">Value</th>
+              <th class="nbhd-health-val" style="width:42%">Value</th>
             </tr></thead>
             <tbody id="health-body"></tbody>
           </table>
@@ -1150,7 +1201,7 @@ function populateNeighborhood(s, partner, bufSize) {
   const tractBody = document.getElementById('tract-body');
   if (tractBody) tractBody.innerHTML = tractRows.map(([label, val]) =>
     `<tr><td class="nbhd-label">${label}</td>
-     <td class="${val!=='N/A'?'nbhd-case':'nbhd-na'}">${val}</td></tr>`
+     <td class="${val!=='N/A'?'nbhd-tract-val':'nbhd-na'}">${val}</td></tr>`
   ).join('');
 
   // ── Community district health section ────────────────────────────────────
@@ -1166,7 +1217,7 @@ function populateNeighborhood(s, partner, bufSize) {
   const healthBody = document.getElementById('health-body');
   if (healthBody) healthBody.innerHTML = cdRows.map(([label, val]) =>
     `<tr><td class="nbhd-label">${label}</td>
-     <td class="${val!=='N/A'?'nbhd-case':'nbhd-na'}">${val}</td></tr>`
+     <td class="${val!=='N/A'?'nbhd-health-val':'nbhd-na'}">${val}</td></tr>`
   ).join('');
 }
 
@@ -1380,6 +1431,84 @@ function populateSummary() {
   setBar('sum-bar-npg-ctrl', Math.round((nCtrl-ctrlPG)/nCtrl*100));
   setN('sum-n-npg-case', nCase-casePG); setN('sum-n-npg-ctrl', nCtrl-ctrlPG);
 }
+
+// ── Search ─────────────────────────────────────────────────────────────────
+function handleSearch(query) {
+  const q = query.trim().toLowerCase();
+  const resultsEl = document.getElementById('search-results');
+  if (!q) { resultsEl.classList.remove('show'); return; }
+
+  const results = [];
+
+  // Search schools (case + ctrl)
+  DASHBOARD_DATA.schools.forEach(s => {
+    if (results.length >= 12) return;
+    if (s.n.toLowerCase().includes(q) || s.en.toLowerCase().includes(q) || s.addr.toLowerCase().includes(q)) {
+      results.push({ type: s.t, name: s.n, sub: `${s.gc} · ${s.boro}`, action: () => selectSchool(s) });
+    }
+  });
+
+  // Search excluded schools
+  DASHBOARD_DATA.excluded.forEach(s => {
+    if (results.length >= 12) return;
+    if (s.n.toLowerCase().includes(q) || (s.addr||'').toLowerCase().includes(q)) {
+      results.push({ type: 'excl', name: s.n, sub: `Non-public · ${s.addr}`, action: () => selectExcluded(s) });
+    }
+  });
+
+  // Search street segments
+  DASHBOARD_DATA.segments.forEach(sg => {
+    if (results.length >= 12) return;
+    const searchStr = [sg.on_street, sg.from_street, sg.to_street, sg.school_name].join(' ').toLowerCase();
+    if (searchStr.includes(q)) {
+      results.push({
+        type: 'seg',
+        name: sg.on_street,
+        sub: `${sg.from_street} → ${sg.to_street} · ${sg.borough}${sg.school_name ? ' · '+sg.school_name : ''}`,
+        action: () => {
+          if (sg.lines && sg.lines.length > 0) {
+            const coords = sg.lines[0].map(c => [c[1], c[0]]);
+            map.fitBounds(L.polyline(coords).getBounds(), { padding: [80, 80], maxZoom: 16 });
+          }
+          document.getElementById('search-input').value = '';
+          resultsEl.classList.remove('show');
+        }
+      });
+    }
+  });
+
+  if (results.length === 0) {
+    resultsEl.innerHTML = `<div class="sr-empty">No results for "${query}"</div>`;
+  } else {
+    resultsEl.innerHTML = results.map((r, i) => {
+      const badgeClass = { case:'sr-badge-case', ctrl:'sr-badge-ctrl', excl:'sr-badge-excl', seg:'sr-badge-seg' }[r.type] || '';
+      const badgeLabel = { case:'Case', ctrl:'Control', excl:'Excluded', seg:'Segment' }[r.type] || '';
+      return `<div class="sr-item" onclick="searchSelect(${i})">
+        <div class="sr-name"><span class="sr-badge ${badgeClass}">${badgeLabel}</span>${r.name}</div>
+        <div class="sr-sub">${r.sub}</div>
+      </div>`;
+    }).join('');
+  }
+  resultsEl.classList.add('show');
+  // Store actions for click lookup
+  resultsEl._actions = results.map(r => r.action);
+}
+
+function searchSelect(i) {
+  const resultsEl = document.getElementById('search-results');
+  if (resultsEl._actions && resultsEl._actions[i]) {
+    resultsEl._actions[i]();
+    document.getElementById('search-input').value = '';
+    resultsEl.classList.remove('show');
+  }
+}
+
+// Close search results when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('#search-wrap')) {
+    document.getElementById('search-results').classList.remove('show');
+  }
+});
 
 // ── Init ───────────────────────────────────────────────────────────────────
 // Dynamic counts from data
