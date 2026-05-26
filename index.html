@@ -398,6 +398,107 @@ html, body {
   .nbhd-tract-val  { color: #D060A0; font-weight: 500; text-align: right; }
   .nbhd-health-val { color: #F4A240; font-weight: 500; text-align: right; }
 
+  /* ── Location lookup panel ── */
+  #lookup-panel {
+    position: absolute; bottom: 16px; right: 16px; z-index: 900;
+  }
+  #lookup-trigger {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: 20px;
+    background: var(--bg-dark); border: 1.5px solid var(--border-dark-med);
+    color: var(--text-light2); font-family: 'Fredoka', sans-serif;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    transition: background 0.15s, border-color 0.15s;
+  }
+  #lookup-trigger:hover { background: var(--bg-panel); border-color: rgba(244,162,64,0.4); }
+  #lookup-expanded {
+    display: none;
+    width: 560px; max-width: calc(100vw - 280px);
+    background: var(--bg-dark); border: 1.5px solid var(--border-dark-med);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  #lookup-panel.open #lookup-trigger  { display: none; }
+  #lookup-panel.open #lookup-expanded { display: block; }
+  #lookup-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-bottom: 1px solid var(--border-dark);
+  }
+  #lookup-title { display: flex; align-items: center; gap: 7px; }
+  #lookup-close {
+    background: none; border: none; color: var(--text-light4);
+    font-size: 14px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+    font-family: inherit; transition: color 0.1s;
+  }
+  #lookup-close:hover { color: var(--text-light); }
+  #lookup-search-row {
+    display: flex; gap: 8px; padding: 10px 14px;
+    border-bottom: 1px solid var(--border-dark);
+  }
+  #lookup-input {
+    width: 100%; padding: 7px 12px; border-radius: 8px;
+    border: 1.5px solid var(--border-dark-med);
+    background: var(--bg-panel); color: var(--text-light);
+    font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none;
+    transition: border-color 0.15s;
+  }
+  #lookup-input::placeholder { color: var(--text-light4); }
+  #lookup-input:focus { border-color: rgba(244,162,64,0.5); }
+  #lookup-go-btn {
+    padding: 7px 16px; border-radius: 8px; background: #F4A240;
+    color: #1A1B2E; font-family: 'Fredoka', sans-serif; font-size: 13px;
+    font-weight: 600; border: none; cursor: pointer; white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+  #lookup-go-btn:hover { opacity: 0.85; }
+  #lookup-suggestions {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--bg-dark); border: 1px solid var(--border-dark-med);
+    border-radius: var(--radius); max-height: 200px; overflow-y: auto;
+    z-index: 3000; display: none; box-shadow: var(--shadow-lg);
+  }
+  #lookup-suggestions.show { display: block; }
+  .ls-item {
+    padding: 8px 12px; cursor: pointer; font-size: 12px;
+    color: var(--text-light2); border-bottom: 1px solid var(--border-dark);
+    font-family: 'DM Sans', sans-serif; transition: background 0.1s;
+  }
+  .ls-item:last-child { border-bottom: none; }
+  .ls-item:hover { background: rgba(255,255,255,0.06); }
+  .ls-item strong { color: var(--text-light); font-weight: 500; }
+  #lookup-results { padding: 12px 14px; }
+  #lookup-location-name {
+    font-family: 'Fredoka', sans-serif; font-size: 15px; font-weight: 600;
+    color: var(--text-light); margin-bottom: 10px;
+  }
+  #lookup-data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .lookup-col-title {
+    font-family: 'Fredoka', sans-serif; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;
+  }
+  .lookup-col-id { font-size: 10px; color: var(--text-light4); margin-bottom: 8px; font-family: 'DM Sans', sans-serif; }
+  .lookup-metric-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 0; border-bottom: 1px solid var(--border-dark);
+  }
+  .lookup-metric-row:last-child { border-bottom: none; }
+  .lookup-metric-label { font-size: 12px; color: var(--text-light3); font-family: 'DM Sans', sans-serif; }
+  .lookup-metric-val   { font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; }
+  .tract-val  { color: #D060A0; }
+  .health-val { color: #F4A240; }
+  #lookup-note {
+    margin-top: 10px; font-size: 10px; color: var(--text-light4);
+    font-style: italic; font-family: 'DM Sans', sans-serif;
+    border-top: 1px solid var(--border-dark); padding-top: 8px;
+  }
+
+
 /* Leaflet overrides */
 .leaflet-control-zoom { border: 1px solid var(--border-dark) !important; box-shadow: var(--shadow) !important; border-radius: 8px !important; overflow: hidden; }
 .leaflet-control-zoom a { background: var(--bg-dark) !important; color: var(--text-light2) !important; font-size: 16px !important; line-height: 28px !important; border-color: var(--border-dark) !important; }
@@ -670,6 +771,83 @@ html, body {
       </div>
     </div><!-- /sb-content -->
   </div><!-- /sidebar -->
+</div>
+
+<!-- Location lookup panel -->
+<div id="lookup-panel">
+  <!-- Collapsed state: pin button -->
+  <div id="lookup-trigger" onclick="openLookup()">
+    <svg width="18" height="24" viewBox="0 0 100 100" style="flex-shrink:0;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3))"><path d="M50,0C30.016,0,13.816,16.2,13.816,36.185C13.816,64.987,50,100,50,100s36.184-35.013,36.184-63.815C86.184,16.2,69.984,0,50,0z M50,62.588c-14.583,0-26.404-11.821-26.404-26.403C23.596,21.602,35.417,9.78,50,9.78c14.582,0,26.404,11.821,26.404,26.404C76.404,50.767,64.582,62.588,50,62.588z" fill="#F4A240"/></svg>
+    <span>Look up any NYC location</span>
+  </div>
+
+  <!-- Expanded state -->
+  <div id="lookup-expanded">
+    <div id="lookup-header">
+      <div id="lookup-title">
+        <svg width="14" height="19" viewBox="0 0 100 100" style="flex-shrink:0"><path d="M50,0C30.016,0,13.816,16.2,13.816,36.185C13.816,64.987,50,100,50,100s36.184-35.013,36.184-63.815C86.184,16.2,69.984,0,50,0z M50,62.588c-14.583,0-26.404-11.821-26.404-26.403C23.596,21.602,35.417,9.78,50,9.78c14.582,0,26.404,11.821,26.404,26.404C76.404,50.767,64.582,62.588,50,62.588z" fill="#F4A240"/></svg>
+        <span style="font-family:'Fredoka',sans-serif;font-size:14px;font-weight:600;color:var(--text-light)">Neighborhood lookup</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;color:var(--text-light4);font-family:'DM Sans',sans-serif">Any NYC school or address</span>
+        <button id="lookup-close" onclick="closeLookup()">✕</button>
+      </div>
+    </div>
+
+    <div id="lookup-search-row">
+      <div style="position:relative;flex:1">
+        <input id="lookup-input" type="text"
+          placeholder="e.g. PS 158, 123 Main St Brooklyn…"
+          oninput="handleLookupSearch(this.value)"
+          onkeydown="if(event.key==='Escape'){closeLookup()}
+                     if(event.key==='Enter'){lookupGo()}"
+          autocomplete="off"/>
+        <div id="lookup-suggestions"></div>
+      </div>
+      <button id="lookup-go-btn" onclick="lookupGo()">Search</button>
+    </div>
+
+    <div id="lookup-results" style="display:none">
+      <div id="lookup-location-name"></div>
+      <div id="lookup-data-grid">
+        <!-- Tract column -->
+        <div class="lookup-col">
+          <div class="lookup-col-title" style="color:#D060A0">Census Tract</div>
+          <div class="lookup-col-id" id="lookup-tract-id"></div>
+          <div class="lookup-metric-row">
+            <span class="lookup-metric-label">% poverty</span>
+            <span class="lookup-metric-val tract-val" id="lv-pov"></span>
+          </div>
+          <div class="lookup-metric-row">
+            <span class="lookup-metric-label">% Hispanic</span>
+            <span class="lookup-metric-val tract-val" id="lv-hisp"></span>
+          </div>
+          <div class="lookup-metric-row">
+            <span class="lookup-metric-label">Median income</span>
+            <span class="lookup-metric-val tract-val" id="lv-inc"></span>
+          </div>
+          <div class="lookup-metric-row">
+            <span class="lookup-metric-label">Pop. density</span>
+            <span class="lookup-metric-val tract-val" id="lv-den"></span>
+          </div>
+        </div>
+        <!-- CD column -->
+        <div class="lookup-col">
+          <div class="lookup-col-title" style="color:#F4A240">Community District</div>
+          <div class="lookup-col-id" id="lookup-cd-id"></div>
+          <div class="lookup-metric-row">
+            <span class="lookup-metric-label">Child obesity %</span>
+            <span class="lookup-metric-val health-val" id="lv-obesity"></span>
+          </div>
+          <div class="lookup-metric-row">
+            <span class="lookup-metric-label">Child asthma /10k</span>
+            <span class="lookup-metric-val health-val" id="lv-asthma"></span>
+          </div>
+        </div>
+      </div>
+      <div id="lookup-note">Data from census tract and community district containing this location.</div>
+    </div>
+  </div>
 </div>
 
 <!-- Map tooltip -->
@@ -1507,6 +1685,171 @@ function searchSelect(i) {
 document.addEventListener('click', e => {
   if (!e.target.closest('#search-wrap')) {
     document.getElementById('search-results').classList.remove('show');
+  }
+});
+
+// ── Location lookup panel ──────────────────────────────────────────────────
+let lookupPin = null;
+let lookupDebounce = null;
+let lookupSuggestions = [];
+
+function openLookup() {
+  document.getElementById('lookup-panel').classList.add('open');
+  setTimeout(() => document.getElementById('lookup-input').focus(), 50);
+}
+function closeLookup() {
+  document.getElementById('lookup-panel').classList.remove('open');
+  document.getElementById('lookup-input').value = '';
+  document.getElementById('lookup-suggestions').classList.remove('show');
+  document.getElementById('lookup-results').style.display = 'none';
+  if (lookupPin) { map.removeLayer(lookupPin); lookupPin = null; }
+}
+
+// Geocoder autocomplete via NYC Planning Labs
+async function handleLookupSearch(val) {
+  clearTimeout(lookupDebounce);
+  const sugEl = document.getElementById('lookup-suggestions');
+  if (!val.trim()) { sugEl.classList.remove('show'); return; }
+  lookupDebounce = setTimeout(async () => {
+    try {
+      const url = `https://geosearch.planninglabs.nyc/v2/autocomplete?text=${encodeURIComponent(val)}&size=6`;
+      const res = await fetch(url);
+      const data = await res.json();
+      lookupSuggestions = data.features || [];
+      if (lookupSuggestions.length === 0) {
+        sugEl.innerHTML = '<div class="ls-item" style="color:var(--text-light4);font-style:italic">No results found</div>';
+      } else {
+        sugEl.innerHTML = lookupSuggestions.map((f, i) => {
+          const label = f.properties.label || f.properties.name || '';
+          const borough = f.properties.borough || '';
+          return `<div class="ls-item" onclick="selectSuggestion(${i})">
+            <strong>${label.split(',')[0]}</strong>${borough ? ' · '+borough : ''}
+          </div>`;
+        }).join('');
+      }
+      sugEl.classList.add('show');
+    } catch(e) { console.error('Geocoder error:', e); }
+  }, 300);
+}
+
+function selectSuggestion(i) {
+  const f = lookupSuggestions[i];
+  if (!f) return;
+  document.getElementById('lookup-input').value = f.properties.label || '';
+  document.getElementById('lookup-suggestions').classList.remove('show');
+  const [lon, lat] = f.geometry.coordinates;
+  showLookupResult(lat, lon, f.properties.label || '');
+}
+
+async function lookupGo() {
+  const val = document.getElementById('lookup-input').value.trim();
+  if (!val) return;
+  document.getElementById('lookup-suggestions').classList.remove('show');
+  try {
+    const url = `https://geosearch.planninglabs.nyc/v2/search?text=${encodeURIComponent(val)}&size=1`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.features && data.features.length > 0) {
+      const f = data.features[0];
+      const [lon, lat] = f.geometry.coordinates;
+      showLookupResult(lat, lon, f.properties.label || val);
+    } else {
+      document.getElementById('lookup-results').style.display = 'block';
+      document.getElementById('lookup-location-name').textContent = 'Location not found — try a more specific address';
+      document.getElementById('lookup-data-grid').style.display = 'none';
+    }
+  } catch(e) { console.error('Geocoder error:', e); }
+}
+
+// Point-in-polygon lookup using loaded GeoJSON data
+function pointInPolygon(lat, lon, feature) {
+  const pt = [lon, lat];
+  const geom = feature.geometry;
+  const polys = geom.type === 'Polygon' ? [geom.coordinates]
+              : geom.type === 'MultiPolygon' ? geom.coordinates : [];
+  for (const poly of polys) {
+    if (pip(pt, poly[0])) return true;
+  }
+  return false;
+}
+function pip([x, y], ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+
+function fmtLookup(val, type) {
+  if (val === null || val === undefined) return '—';
+  if (type === 'dollar') return '$' + Math.round(val).toLocaleString();
+  if (type === 'pct')    return (Math.round(val * 10) / 10) + '%';
+  return (Math.round(val * 10) / 10).toLocaleString();
+}
+
+function showLookupResult(lat, lon, label) {
+  // Drop / move pin
+  if (lookupPin) map.removeLayer(lookupPin);
+  lookupPin = L.marker([lat, lon], {
+    icon: L.divIcon({
+      className: '',
+      html: `<svg width="20" height="27" viewBox="0 0 100 100" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4))"><path d="M50,0C30.016,0,13.816,16.2,13.816,36.185C13.816,64.987,50,100,50,100s36.184-35.013,36.184-63.815C86.184,16.2,69.984,0,50,0z M50,62.588c-14.583,0-26.404-11.821-26.404-26.403C23.596,21.602,35.417,9.78,50,9.78c14.582,0,26.404,11.821,26.404,26.404C76.404,50.767,64.582,62.588,50,62.588z" fill="#F4A240"/></svg>`,
+      iconSize: [20, 27], iconAnchor: [10, 27]
+    }),
+    zIndexOffset: 1000
+  }).addTo(map);
+  map.setView([lat, lon], Math.max(map.getZoom(), 14));
+
+  // Find matching tract
+  let tractProps = null;
+  if (demoGeoJSON) {
+    const match = demoGeoJSON.features.find(f => pointInPolygon(lat, lon, f));
+    if (match) tractProps = match.properties;
+  }
+
+  // Find matching CD
+  let cdProps = null;
+  if (healthGeoJSON) {
+    const match = healthGeoJSON.features.find(f => pointInPolygon(lat, lon, f));
+    if (match) cdProps = match.properties;
+  }
+
+  // Populate results
+  const resultsEl = document.getElementById('lookup-results');
+  document.getElementById('lookup-location-name').textContent = label;
+  document.getElementById('lookup-data-grid').style.display = 'grid';
+
+  // Tract
+  document.getElementById('lookup-tract-id').textContent =
+    tractProps ? `GEOID: ${tractProps.GEOID || '—'}` : 'Load the demographics overlay to enable tract lookup';
+  document.getElementById('lv-pov').textContent  = tractProps ? fmtLookup(tractProps.pov_pct, 'pct') : '—';
+  document.getElementById('lv-hisp').textContent = tractProps ? fmtLookup(tractProps.hisp_pct, 'pct') : '—';
+  document.getElementById('lv-inc').textContent  = tractProps ? fmtLookup(tractProps.med_inc, 'dollar') : '—';
+  document.getElementById('lv-den').textContent  = tractProps ? fmtLookup(tractProps.pop_den, null) : '—';
+
+  // CD
+  document.getElementById('lookup-cd-id').textContent =
+    cdProps ? `Community District ${cdProps.BoroCD || '—'}` : 'Load the health overlay to enable CD lookup';
+  document.getElementById('lv-obesity').textContent = cdProps ? fmtLookup(cdProps.obesity_pct, 'pct') : '—';
+  document.getElementById('lv-asthma').textContent  = cdProps ? fmtLookup(cdProps.asthma_rate, null) : '—';
+
+  // If neither GeoJSON is loaded yet, offer to load them
+  if (!tractProps && !cdProps) {
+    document.getElementById('lookup-note').innerHTML =
+      `Tip: activate a <span style="color:#D060A0">Demographics</span> or <span style="color:#F4A240">Health</span> overlay in the left panel to enable detailed data lookup.`;
+  } else {
+    document.getElementById('lookup-note').textContent =
+      'Data from the census tract and community district containing this location.';
+  }
+
+  resultsEl.style.display = 'block';
+}
+
+// Close suggestions when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('#lookup-search-row')) {
+    document.getElementById('lookup-suggestions').classList.remove('show');
   }
 });
 
