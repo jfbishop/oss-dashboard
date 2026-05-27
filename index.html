@@ -87,7 +87,8 @@ html, body {
 #clear-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-light); }
 
 /* ── App layout ── */
-#app { position: fixed; top: 52px; left: 0; right: 0; bottom: 0; display: flex; }
+#outer-layout { position: fixed; top: 52px; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; }
+#app { flex: 1; display: flex; overflow: hidden; }
 
 /* ── LEFT LAYER PANEL ── */
 #layer-panel {
@@ -398,48 +399,45 @@ html, body {
   .nbhd-tract-val  { color: #D060A0; font-weight: 500; text-align: right; }
   .nbhd-health-val { color: #F4A240; font-weight: 500; text-align: right; }
 
-  /* ── Location lookup panel ── */
-  #lookup-panel {
-    position: absolute; bottom: 16px; right: 16px; z-index: 900;
+  /* ── Location lookup bar (full width, bottom of map area) ── */
+  #lookup-bar {
+    flex-shrink: 0;
+    background: var(--bg-dark);
+    border-top: 1px solid var(--border-dark);
   }
-  #lookup-trigger {
+  #lookup-bar-collapsed {
     display: flex; align-items: center; gap: 8px;
-    padding: 8px 14px; border-radius: 20px;
-    background: var(--bg-dark); border: 1.5px solid var(--border-dark-med);
-    color: var(--text-light2); font-family: 'Fredoka', sans-serif;
-    font-size: 13px; font-weight: 500; cursor: pointer;
-    box-shadow: var(--shadow-lg);
-    transition: background 0.15s, border-color 0.15s;
+    padding: 8px 20px; cursor: pointer;
+    font-family: 'Fredoka', sans-serif; font-size: 13px; font-weight: 500;
+    color: var(--text-light3); user-select: none;
+    transition: background 0.12s, color 0.12s;
   }
-  #lookup-trigger:hover { background: var(--bg-panel); border-color: rgba(244,162,64,0.4); }
-  #lookup-expanded {
-    display: none;
-    width: 560px; max-width: calc(100vw - 280px);
-    background: var(--bg-dark); border: 1.5px solid var(--border-dark-med);
-    border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
-    overflow: hidden;
-    animation: slideUp 0.2s ease;
-  }
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  #lookup-panel.open #lookup-trigger  { display: none; }
-  #lookup-panel.open #lookup-expanded { display: block; }
+  #lookup-bar-collapsed:hover { background: var(--bg-panel); color: var(--text-light2); }
+  #lookup-bar-arrow { margin-left: auto; font-size: 10px; color: var(--text-light4); }
+  #lookup-expanded { display: none; }
+  #lookup-bar.open #lookup-bar-collapsed { display: none; }
+  #lookup-bar.open #lookup-expanded { display: block; }
   #lookup-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px; border-bottom: 1px solid var(--border-dark);
+    padding: 8px 20px; border-bottom: 1px solid var(--border-dark);
+    background: var(--bg-panel);
   }
   #lookup-title { display: flex; align-items: center; gap: 7px; }
   #lookup-close {
-    background: none; border: none; color: var(--text-light4);
-    font-size: 14px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
-    font-family: inherit; transition: color 0.1s;
+    background: none; border: 1.5px solid var(--border-dark);
+    color: var(--text-light3); font-size: 11px; font-weight: 500;
+    cursor: pointer; padding: 3px 10px; border-radius: 12px;
+    font-family: 'DM Sans', sans-serif; transition: color 0.1s, border-color 0.1s;
   }
-  #lookup-close:hover { color: var(--text-light); }
-  #lookup-search-row {
-    display: flex; gap: 8px; padding: 10px 14px;
-    border-bottom: 1px solid var(--border-dark);
+  #lookup-close:hover { color: var(--text-light); border-color: var(--border-dark-med); }
+  #lookup-body {
+    display: flex; gap: 0; align-items: flex-start;
+    max-height: 260px; overflow-y: auto; padding: 14px 20px; gap: 20px;
+  }
+  #lookup-body::-webkit-scrollbar { width: 4px; }
+  #lookup-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+  #lookup-search-col {
+    width: 240px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;
   }
   #lookup-input {
     width: 100%; padding: 7px 12px; border-radius: 8px;
@@ -453,14 +451,14 @@ html, body {
   #lookup-go-btn {
     padding: 7px 16px; border-radius: 8px; background: #F4A240;
     color: #1A1B2E; font-family: 'Fredoka', sans-serif; font-size: 13px;
-    font-weight: 600; border: none; cursor: pointer; white-space: nowrap;
-    transition: opacity 0.15s;
+    font-weight: 600; border: none; cursor: pointer;
+    transition: opacity 0.15s; align-self: flex-start;
   }
   #lookup-go-btn:hover { opacity: 0.85; }
   #lookup-suggestions {
     position: absolute; top: calc(100% + 4px); left: 0; right: 0;
     background: var(--bg-dark); border: 1px solid var(--border-dark-med);
-    border-radius: var(--radius); max-height: 200px; overflow-y: auto;
+    border-radius: var(--radius); max-height: 180px; overflow-y: auto;
     z-index: 3000; display: none; box-shadow: var(--shadow-lg);
   }
   #lookup-suggestions.show { display: block; }
@@ -472,12 +470,17 @@ html, body {
   .ls-item:last-child { border-bottom: none; }
   .ls-item:hover { background: rgba(255,255,255,0.06); }
   .ls-item strong { color: var(--text-light); font-weight: 500; }
-  #lookup-results { padding: 12px 14px; }
   #lookup-location-name {
-    font-family: 'Fredoka', sans-serif; font-size: 15px; font-weight: 600;
-    color: var(--text-light); margin-bottom: 10px;
+    font-family: 'Fredoka', sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--text-light); line-height: 1.3;
   }
-  #lookup-data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  #lookup-data-grid {
+    flex: 1; display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0; border-left: 1px solid var(--border-dark); padding-left: 20px;
+  }
+  .lookup-col { padding-right: 20px; border-right: 1px solid var(--border-dark); }
+  .lookup-col:last-child { border-right: none; padding-right: 0; }
   .lookup-col-title {
     font-family: 'Fredoka', sans-serif; font-size: 11px; font-weight: 600;
     letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;
@@ -488,16 +491,14 @@ html, body {
     padding: 4px 0; border-bottom: 1px solid var(--border-dark);
   }
   .lookup-metric-row:last-child { border-bottom: none; }
-  .lookup-metric-label { font-size: 12px; color: var(--text-light3); font-family: 'DM Sans', sans-serif; }
+  .lookup-metric-label { font-size: 11px; color: var(--text-light3); font-family: 'DM Sans', sans-serif; }
   .lookup-metric-val   { font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; }
   .tract-val  { color: #D060A0; }
   .health-val { color: #F4A240; }
   #lookup-note {
-    margin-top: 10px; font-size: 10px; color: var(--text-light4);
-    font-style: italic; font-family: 'DM Sans', sans-serif;
-    border-top: 1px solid var(--border-dark); padding-top: 8px;
+    font-size: 11px; color: var(--text-light4);
+    font-family: 'DM Sans', sans-serif; line-height: 1.4;
   }
-
 
 /* Leaflet overrides */
 .leaflet-control-zoom { border: 1px solid var(--border-dark) !important; box-shadow: var(--shadow) !important; border-radius: 8px !important; overflow: hidden; }
@@ -524,6 +525,7 @@ html, body {
 </div>
 
 <!-- Main layout -->
+<div id="outer-layout">
 <div id="app">
 
   <!-- LEFT: Layer control panel -->
@@ -771,45 +773,47 @@ html, body {
       </div>
     </div><!-- /sb-content -->
   </div><!-- /sidebar -->
-</div>
+</div><!-- /app -->
 
-<!-- Location lookup panel -->
-<div id="lookup-panel">
-  <!-- Collapsed state: pin button -->
-  <div id="lookup-trigger" onclick="openLookup()">
-    <svg width="18" height="24" viewBox="0 0 100 100" style="flex-shrink:0;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3))"><path d="M50,0C30.016,0,13.816,16.2,13.816,36.185C13.816,64.987,50,100,50,100s36.184-35.013,36.184-63.815C86.184,16.2,69.984,0,50,0z M50,62.588c-14.583,0-26.404-11.821-26.404-26.403C23.596,21.602,35.417,9.78,50,9.78c14.582,0,26.404,11.821,26.404,26.404C76.404,50.767,64.582,62.588,50,62.588z" fill="#F4A240"/></svg>
-    <span>Look up any NYC location</span>
+<!-- Location lookup bar (bottom, full width between panels) -->
+<div id="lookup-bar">
+  <!-- Collapsed: thin bar -->
+  <div id="lookup-bar-collapsed" onclick="openLookup()">
+    <svg width="13" height="17" viewBox="0 0 100 100" style="flex-shrink:0"><path d="M50,0C30.016,0,13.816,16.2,13.816,36.185C13.816,64.987,50,100,50,100s36.184-35.013,36.184-63.815C86.184,16.2,69.984,0,50,0z M50,62.588c-14.583,0-26.404-11.821-26.404-26.403C23.596,21.602,35.417,9.78,50,9.78c14.582,0,26.404,11.821,26.404,26.404C76.404,50.767,64.582,62.588,50,62.588z" fill="#F4A240"/></svg>
+    <span>Look up neighborhood data for any NYC location</span>
+    <span id="lookup-bar-arrow">▲</span>
   </div>
 
-  <!-- Expanded state -->
+  <!-- Expanded panel -->
   <div id="lookup-expanded">
     <div id="lookup-header">
       <div id="lookup-title">
-        <svg width="14" height="19" viewBox="0 0 100 100" style="flex-shrink:0"><path d="M50,0C30.016,0,13.816,16.2,13.816,36.185C13.816,64.987,50,100,50,100s36.184-35.013,36.184-63.815C86.184,16.2,69.984,0,50,0z M50,62.588c-14.583,0-26.404-11.821-26.404-26.403C23.596,21.602,35.417,9.78,50,9.78c14.582,0,26.404,11.821,26.404,26.404C76.404,50.767,64.582,62.588,50,62.588z" fill="#F4A240"/></svg>
-        <span style="font-family:'Fredoka',sans-serif;font-size:14px;font-weight:600;color:var(--text-light)">Neighborhood lookup</span>
+        <svg width="13" height="17" viewBox="0 0 100 100" style="flex-shrink:0"><path d="M50,0C30.016,0,13.816,16.2,13.816,36.185C13.816,64.987,50,100,50,100s36.184-35.013,36.184-63.815C86.184,16.2,69.984,0,50,0z M50,62.588c-14.583,0-26.404-11.821-26.404-26.403C23.596,21.602,35.417,9.78,50,9.78c14.582,0,26.404,11.821,26.404,26.404C76.404,50.767,64.582,62.588,50,62.588z" fill="#F4A240"/></svg>
+        <span style="font-family:'Fredoka',sans-serif;font-size:14px;font-weight:600;color:var(--text-light)">Neighborhood lookup · any NYC location</span>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:11px;color:var(--text-light4);font-family:'DM Sans',sans-serif">Any NYC school or address</span>
-        <button id="lookup-close" onclick="closeLookup()">✕</button>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px;color:var(--text-light4);font-family:'DM Sans',sans-serif">Enter a school name or address</span>
+        <button id="lookup-close" onclick="closeLookup()">▼ Collapse</button>
       </div>
     </div>
 
-    <div id="lookup-search-row">
-      <div style="position:relative;flex:1">
-        <input id="lookup-input" type="text"
-          placeholder="e.g. PS 158, 123 Main St Brooklyn…"
-          oninput="handleLookupSearch(this.value)"
-          onkeydown="if(event.key==='Escape'){closeLookup()}
-                     if(event.key==='Enter'){lookupGo()}"
-          autocomplete="off"/>
-        <div id="lookup-suggestions"></div>
+    <div id="lookup-body">
+      <div id="lookup-search-col">
+        <div style="position:relative">
+          <input id="lookup-input" type="text"
+            placeholder="e.g. PS 158 Manhattan, 125 Worth St New York…"
+            oninput="handleLookupSearch(this.value)"
+            onkeydown="if(event.key==='Escape'){closeLookup()}
+                       if(event.key==='Enter'){lookupGo()}"
+            autocomplete="off"/>
+          <div id="lookup-suggestions"></div>
+        </div>
+        <button id="lookup-go-btn" onclick="lookupGo()">Search</button>
+        <div id="lookup-location-name"></div>
+        <div id="lookup-note">Enter a school name or NYC address above to see neighborhood characteristics.</div>
       </div>
-      <button id="lookup-go-btn" onclick="lookupGo()">Search</button>
-    </div>
 
-    <div id="lookup-results" style="display:none">
-      <div id="lookup-location-name"></div>
-      <div id="lookup-data-grid">
+      <div id="lookup-data-grid" style="display:none">
         <!-- Tract column -->
         <div class="lookup-col">
           <div class="lookup-col-title" style="color:#D060A0">Census Tract</div>
@@ -827,13 +831,13 @@ html, body {
             <span class="lookup-metric-val tract-val" id="lv-inc"></span>
           </div>
           <div class="lookup-metric-row">
-            <span class="lookup-metric-label">Pop. density</span>
+            <span class="lookup-metric-label">Pop. density /sq mi</span>
             <span class="lookup-metric-val tract-val" id="lv-den"></span>
           </div>
         </div>
         <!-- CD column -->
         <div class="lookup-col">
-          <div class="lookup-col-title" style="color:#F4A240">Community District</div>
+          <div class="lookup-col-title" style="color:#F4A240">Community District Health</div>
           <div class="lookup-col-id" id="lookup-cd-id"></div>
           <div class="lookup-metric-row">
             <span class="lookup-metric-label">Child obesity %</span>
@@ -845,10 +849,11 @@ html, body {
           </div>
         </div>
       </div>
-      <div id="lookup-note">Data from census tract and community district containing this location.</div>
     </div>
   </div>
 </div>
+
+</div><!-- /outer-layout -->
 
 <!-- Map tooltip -->
 <div id="maptip"></div>
@@ -1694,15 +1699,19 @@ let lookupDebounce = null;
 let lookupSuggestions = [];
 
 function openLookup() {
-  document.getElementById('lookup-panel').classList.add('open');
+  document.getElementById('lookup-bar').classList.add('open');
   setTimeout(() => document.getElementById('lookup-input').focus(), 50);
+  map.invalidateSize(); // recalculate after layout shift
 }
 function closeLookup() {
-  document.getElementById('lookup-panel').classList.remove('open');
+  document.getElementById('lookup-bar').classList.remove('open');
   document.getElementById('lookup-input').value = '';
   document.getElementById('lookup-suggestions').classList.remove('show');
-  document.getElementById('lookup-results').style.display = 'none';
+  document.getElementById('lookup-data-grid').style.display = 'none';
+  document.getElementById('lookup-location-name').textContent = '';
+  document.getElementById('lookup-note').textContent = 'Enter a school name or NYC address above to see neighborhood characteristics.';
   if (lookupPin) { map.removeLayer(lookupPin); lookupPin = null; }
+  map.invalidateSize();
 }
 
 // Geocoder autocomplete via NYC Planning Labs
@@ -1754,7 +1763,6 @@ async function lookupGo() {
       const [lon, lat] = f.geometry.coordinates;
       showLookupResult(lat, lon, f.properties.label || val);
     } else {
-      document.getElementById('lookup-results').style.display = 'block';
       document.getElementById('lookup-location-name').textContent = 'Location not found — try a more specific address';
       document.getElementById('lookup-data-grid').style.display = 'none';
     }
@@ -1816,9 +1824,7 @@ function showLookupResult(lat, lon, label) {
   }
 
   // Populate results
-  const resultsEl = document.getElementById('lookup-results');
   document.getElementById('lookup-location-name').textContent = label;
-  document.getElementById('lookup-data-grid').style.display = 'grid';
 
   // Tract
   document.getElementById('lookup-tract-id').textContent =
@@ -1843,7 +1849,7 @@ function showLookupResult(lat, lon, label) {
       'Data from the census tract and community district containing this location.';
   }
 
-  resultsEl.style.display = 'block';
+  document.getElementById('lookup-data-grid').style.display = 'grid';
 }
 
 // Close suggestions when clicking outside
